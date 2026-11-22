@@ -876,7 +876,14 @@ function HomeBars(props: {
   const orderRef = useRef<HomeEntryKey[]>(DEFAULT_HOME_ORDER);
   const [dragKey, setDragKey] = useState<HomeEntryKey | null>(null);
   const gridRef = useRef<HTMLDivElement>(null);
-  const press = useRef<{ key: HomeEntryKey; y: number; timer: number; dragging: boolean } | null>(null);
+  const press = useRef<{
+    key: HomeEntryKey;
+    y: number;
+    timer: number;
+    dragging: boolean;
+    el?: HTMLElement;
+    pointerId?: number;
+  } | null>(null);
   const suppressClick = useRef(false);
   const prevOverflow = useRef('');
   /* 拖到某个位置后先停 0.2 秒再真正换位，避免一路划过去时疯狂重排 */
@@ -912,17 +919,13 @@ function HomeBars(props: {
   const beginPress = (e: PointerEvent, key: HomeEntryKey) => {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     window.clearTimeout(press.current?.timer);
-    /* 抓住指针：拖动时手指/鼠标移到别的条上，事件仍然回到这一条 */
-    try {
-      (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
-    } catch {
-      /* 个别环境不支持就算了 */
-    }
     const y = e.clientY;
     press.current = {
       key,
       y,
       dragging: false,
+      el: e.currentTarget as HTMLElement,
+      pointerId: e.pointerId,
       timer: window.setTimeout(() => {
         const p = press.current;
         if (!p) return;
@@ -941,8 +944,18 @@ function HomeBars(props: {
         } catch {
           /* 不支持震动就算了 */
         }
+        try {
+          p.el?.setPointerCapture?.(p.pointerId!);
+        } catch {
+          /* 不支持就算了 */
+        }
         prevOverflow.current = document.body.style.overflow;
         document.body.style.overflow = 'hidden';
+        const scroller = document.querySelector<HTMLElement>('.tabbody');
+        if (scroller) {
+          scroller.dataset.prevOverflow = scroller.style.overflow;
+          scroller.style.overflow = 'hidden';
+        }
         /* 手指/鼠标在拖动结束时可能已经离开这一条，统一在 window 上收尾 */
         window.addEventListener('pointerup', endPress, { once: true });
         window.addEventListener('pointercancel', endPress, { once: true });
@@ -1039,7 +1052,7 @@ function HomeBars(props: {
       timer: window.setTimeout(() => {
         pendingMove.current = null;
         applyReorder(p.key, clamped);
-      }, 100),
+      }, 60),
     };
   };
 
@@ -1056,6 +1069,11 @@ function HomeBars(props: {
       }
       setDragKey(null);
       document.body.style.overflow = prevOverflow.current;
+      const scroller = document.querySelector<HTMLElement>('.tabbody');
+      if (scroller) {
+        scroller.style.overflow = scroller.dataset.prevOverflow ?? '';
+        delete scroller.dataset.prevOverflow;
+      }
       void getKV().set(HOME_ORDER_KEY, orderRef.current).catch(() => {
         /* 存不上就只在本次生效 */
       });
@@ -1078,6 +1096,10 @@ function HomeBars(props: {
     onPointerMove: (e: PointerEvent) => movePress(e),
     onPointerUp: () => endPress(),
     onPointerCancel: () => endPress(),
+    onTouchMove: (e: TouchEvent) => {
+      /* 拖动中才拦截滚动；平时从条目上起手仍然可以滚页面 */
+      if (press.current?.dragging && e.cancelable) e.preventDefault();
+    },
     onContextMenu: (e: Event) => e.preventDefault(),
   });
 

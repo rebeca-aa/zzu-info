@@ -2951,12 +2951,12 @@ html[data-scheme='light'] .tabbar::after {
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
-  /* 触摸从条目上开始时不要被系统当成滚动，否则长按后一滑就 pointercancel */
-  touch-action: none;
+  /* 允许从条目上起手滚屏；长按进入拖动后再用 touchmove 拦截滚动 */
+  touch-action: pan-y;
   -webkit-user-drag: none;
 }
 
-/* 选择态里再把网格本身也锁住，拖动不会被页面滚动打断 */
+/* 选择态里锁住网格的触摸手势，拖动不会被页面滚动打断 */
 .bars-grid.reordering {
   touch-action: none;
 }
