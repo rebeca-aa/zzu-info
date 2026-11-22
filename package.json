@@ -1,7 +1,7 @@
 {
   "name": "zzu-info",
   "private": true,
-  "version": "0.2.152",
+  "version": "0.2.153",
   "type": "module",
   "description": "郑州大学「郑大信息」——基于实测 API 的 MV3 侧边栏助手",
   "scripts": {

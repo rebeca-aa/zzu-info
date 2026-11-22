@@ -222,7 +222,9 @@ public class MainActivity extends Activity {
                 @Override public void run() {
                     try {
                         int bg = Color.parseColor(hex);
-                        int bottom = blend(bg, 0xFF000000, 0.10f);
+                        boolean light = luminance(bg) > 0.55;
+                        /* 浅色主题向白色渐变（鸿蒙灰边改白），深色主题向更深一档渐变 */
+                        int bottom = light ? Color.WHITE : blend(bg, 0xFF000000, 0.10f);
                         Window win = getWindow();
                         win.setStatusBarColor(bg);
                         win.setNavigationBarColor(bottom);
@@ -231,7 +233,6 @@ public class MainActivity extends Activity {
                         win.setBackgroundDrawable(g);
                         View decor = win.getDecorView();
                         decor.setBackground(g);
-                        boolean light = luminance(bg) > 0.55;
                         int flags = decor.getSystemUiVisibility();
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                             if (light) flags |= View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;

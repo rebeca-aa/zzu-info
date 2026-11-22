@@ -2918,16 +2918,30 @@ header .termline .back svg {
 }
 
 /* 米白下用暖茶色渐变，别让强调色的蓝把底栏染灰 */
+/* 浅色主题（米白/亮粉/自定义浅色）：底栏向白色渐变过去，系统灰边不再突兀 */
 html[data-theme='cream'] .tabbar {
   background: linear-gradient(
     to bottom,
-    color-mix(in srgb, var(--bg) 84%, var(--line)),
-    color-mix(in srgb, var(--bg) 95%, var(--line)),
-    var(--bg)
+    color-mix(in srgb, var(--bg) 84%, var(--line)) 0%,
+    color-mix(in srgb, var(--bg) 40%, #fff) 55%,
+    #fff 100%
   );
-  border-top-color: color-mix(in srgb, var(--line) 70%, transparent);
+  border-top-color: color-mix(in srgb, var(--line) 60%, transparent);
 }
 
-html[data-theme='cream'] .tabbar::after {
-  background: linear-gradient(to bottom, var(--bg), color-mix(in srgb, var(--bg) 96%, var(--line)));
+html[data-theme='pink'] .tabbar,
+html[data-scheme='light'] .tabbar {
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--bg) 84%, var(--accent) 16%) 0%,
+    color-mix(in srgb, var(--bg) 40%, #fff) 55%,
+    #fff 100%
+  );
+  border-top-color: color-mix(in srgb, var(--line) 60%, transparent);
+}
+
+html[data-theme='cream'] .tabbar::after,
+html[data-theme='pink'] .tabbar::after,
+html[data-scheme='light'] .tabbar::after {
+  background: linear-gradient(to bottom, color-mix(in srgb, var(--bg) 40%, #fff), #fff);
 }
