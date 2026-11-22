@@ -12,14 +12,17 @@ import { CampusService } from '../src/core/services';
 import {
   clearTokens,
   exportTokenBundle,
+  getAutoTicket,
   getLlmSettings,
   importTokenBundle,
   loadSession,
+  setAutoTicket,
   setLlmSettings,
   tokenStatuses,
   type LlmSettingsStored,
   type TokenStatus,
 } from '../src/core/storage';
+import { parseTicketHash } from '../src/core/ticketHash';
 import { LlmFields } from '../src/ui/llm-fields';
 import { LoginPage } from './login-card';
 import { CampusMap, RichText, download } from '../src/ui/rich';
@@ -937,19 +940,19 @@ const looksAuthLost = (msg: string): boolean => AUTH_LOST_RE.test(msg);
   /* 从分享链接自动导入：链接形如 .../pwa/index.html#code=<同步码> 或 #token=<JWT>
      —— 一台有登录态的设备点「复制分享链接」，发给另一台设备点开即可，不用手打码。 */
   useEffect(() => {
-    const src = (location.hash || '').replace(/^#/, '') || '';
-    const m = /(?:code|token|idToken)=([^&]+)/i.exec(src);
-    const hit = m && m[1] ? m[1] : '';
+    const hit = parseTicketHash(location.hash);
     if (!hit) return;
     (async () => {
       try {
-        const raw = decodeURIComponent(hit);
-        const bundle = parseImportLink(raw);
+        const bundle = parseImportLink(hit.raw);
         const st = await importTokenBundle(bundle);
         setStatuses(st);
         const llmNow = await getLlmSettings();
         setLlm(llmNow);
         void adoptStoredTheme();
+        /* 带 auto=1 说明是自动取票脚本送回来的：记住这台设备装了它，
+           以后票过期 App 才敢自己跳去 CAS 再回来。 */
+        if (hit.auto) await setAutoTicket(true);
         setNote('已从链接导入登录态');
         setTimeout(() => setNote(''), 2500);
       } catch (e) {
@@ -959,6 +962,24 @@ const looksAuthLost = (msg: string): boolean => AUTH_LOST_RE.test(msg);
       }
     })();
   }, []);
+
+  /*
+   * 票过期 + 这台设备装了自动取票脚本 → 直接去 CAS 走一趟，脚本会把新票带回来。
+   * 一次会话只跳一次；跳过去之后如果没有 TGT，会看到 CAS 的登录页，用户登一次就回来了。
+   * 没装脚本的设备没有这个标记，不会触发——否则会把普通用户卡在一屏 CSS 上。
+   */
+  const autoRenewTried = useRef(false);
+  useEffect(() => {
+    if (autoRenewTried.current || !hydrated.current) return;
+    if (!statuses.length) return;
+    if (statuses.some((s) => s.valid)) return;
+    void (async () => {
+      if (autoRenewTried.current) return;
+      autoRenewTried.current = true;
+      if (!(await getAutoTicket())) return;
+      location.replace(CAS_LOGIN);
+    })();
+  }, [statuses]);
 
   /** 打开任一类通知时才申请权限（不打扰用户）。 */
   async function ensureNotifyPermission() {
@@ -1730,6 +1751,10 @@ const looksAuthLost = (msg: string): boolean => AUTH_LOST_RE.test(msg);
                   value={paste}
                   onInput={(e) => setPaste((e.target as HTMLTextAreaElement).value)}
                 />
+                <p class="hint">
+                  iOS：装一次「自动取票」脚本，登录完会自动跳回来，连复制都省了——
+                  脚本和步骤见 <code>docs/ios-login.md</code>。
+                </p>
                 <p class="row">
                   <button class="primary" onClick={() => void doImport()} disabled={!paste.trim()}>
                     保存

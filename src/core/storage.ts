@@ -111,6 +111,25 @@ export async function clearTokens(): Promise<void> {
   await writeStore({});
 }
 
+/** 「这台设备装了自动取票脚本」的标记：票过期时才敢自己跳去 CAS 再回来。 */
+const AUTO_TICKET_KEY = 'autoTicket';
+
+export async function getAutoTicket(): Promise<boolean> {
+  try {
+    return Boolean(await getKV().get<boolean>(AUTO_TICKET_KEY));
+  } catch {
+    return false;
+  }
+}
+
+export async function setAutoTicket(on: boolean): Promise<void> {
+  try {
+    await getKV().set(AUTO_TICKET_KEY, on);
+  } catch {
+    /* 存不上不影响这次导入，只是下次不会自动续 */
+  }
+}
+
 // ---- 学校 DeepSeek(Open WebUI) 的登录会话 ----
 // content script 在 chat.zzu.edu.cn 上读到 localStorage.token 后传过来，
 // 用于「一键换成 API Key」——免得用户手动粘贴。
