@@ -76,9 +76,11 @@ jobs:
             exit 1
           fi
 
+      # pipefail：`| tee` 的退出码是 tee 的，以前 gradle 编译失败这一步照样显示成功，
+      # 到后面「找不到 APK」才炸，真正的原因（Java 编译错误）被埋在日志里。
       - name: assembleDebug
         working-directory: mobile/android
-        run: gradle assembleDebug --no-daemon --stacktrace 2>&1 | tee /tmp/gradle-build.log
+        run: set -o pipefail; gradle assembleDebug --no-daemon --stacktrace 2>&1 | tee /tmp/gradle-build.log
 
       # 失败也把编译日志发到 Release（Actions 的 artifact / 日志下载都要登录，Release 不用）
       - name: 失败时上传编译日志

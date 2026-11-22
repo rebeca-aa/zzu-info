@@ -1,4 +1,4 @@
-package cn.zzu.zzuinfo;
+package cn.zzu.campuslayer;
 
 import android.content.Context;
 import android.content.SharedPreferences;
