@@ -928,6 +928,13 @@ function HomeBars(props: {
         if (!p) return;
         p.dragging = true;
         suppressClick.current = true;
+        const g = gridRef.current;
+        if (g) {
+          for (const el of Array.from(g.querySelectorAll<HTMLElement>('.bar'))) {
+            el.style.transition = '';
+            el.style.transform = '';
+          }
+        }
         setDragKey(key);
         try {
           navigator.vibrate?.(15);
@@ -991,20 +998,30 @@ function HomeBars(props: {
     e.preventDefault();
     const grid = gridRef.current;
     if (!grid) return;
+    /* 刚开始拖动时手指还有一点抖：位移不到 6px 不参与换位 */
+    if (Math.abs(e.clientY - p.y) < 6) return;
     const nodes = Array.from(grid.querySelectorAll<HTMLElement>('[data-entry]'));
     if (!nodes.length) return;
-    let target = nodes.length - 1;
-    for (let i = 0; i < nodes.length; i++) {
-      const r = nodes[i]!.getBoundingClientRect();
-      if (e.clientY < r.top + r.height / 2) {
-        target = i;
-        break;
-      }
-    }
     const prevOrder = orderRef.current;
     const vis = prevOrder.filter((k) => visibleMap[k]);
     const from = vis.indexOf(p.key);
     if (from < 0) return;
+    const midOf = (i: number) => {
+      const r = nodes[i]?.getBoundingClientRect();
+      return r ? r.top + r.height / 2 : 0;
+    };
+    /* 手指还在自己条目范围内就保持不动，避免刚拖动就跳到相邻格 */
+    const own = nodes[from]?.getBoundingClientRect();
+    let target = from;
+    if (!own || e.clientY < own.top || e.clientY > own.bottom) {
+      /* 用其它条目的中线做插入点：支持一次跨多格，也不会从中间突然乱跳 */
+      let insert = 0;
+      for (let i = 0; i < vis.length; i++) {
+        if (i === from) continue;
+        if (e.clientY > midOf(i)) insert += 1;
+      }
+      target = insert;
+    }
     const clamped = Math.max(0, Math.min(vis.length - 1, target));
     if (from === clamped) {
       if (pendingMove.current) window.clearTimeout(pendingMove.current.timer);
@@ -1022,7 +1039,7 @@ function HomeBars(props: {
       timer: window.setTimeout(() => {
         pendingMove.current = null;
         applyReorder(p.key, clamped);
-      }, 200),
+      }, 100),
     };
   };
 
