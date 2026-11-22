@@ -937,7 +937,7 @@ function HomeBars(props: {
         /* 手指/鼠标在拖动结束时可能已经离开这一条，统一在 window 上收尾 */
         window.addEventListener('pointerup', endPress, { once: true });
         window.addEventListener('pointercancel', endPress, { once: true });
-      }, 1_000),
+      }, 800),
     };
   };
 
@@ -965,18 +965,36 @@ function HomeBars(props: {
         break;
       }
     }
-    setOrder((prev) => {
-      const vis = prev.filter((k) => visibleMap[k]);
-      const from = vis.indexOf(p.key);
-      if (from < 0) return prev;
-      const clamped = Math.max(0, Math.min(vis.length - 1, target));
-      if (from === clamped) return prev;
-      const nextVis = [...vis];
-      const [moved] = nextVis.splice(from, 1);
-      nextVis.splice(clamped, 0, moved!);
-      const next = [...nextVis, ...prev.filter((k) => !nextVis.includes(k))];
-      orderRef.current = next;
-      return next;
+    const prevOrder = orderRef.current;
+    const vis = prevOrder.filter((k) => visibleMap[k]);
+    const from = vis.indexOf(p.key);
+    if (from < 0) return;
+    const clamped = Math.max(0, Math.min(vis.length - 1, target));
+    if (from === clamped) return;
+    const nextVis = [...vis];
+    const [moved] = nextVis.splice(from, 1);
+    nextVis.splice(clamped, 0, moved!);
+    const next = [...nextVis, ...prevOrder.filter((k) => !nextVis.includes(k))];
+
+    /* FLIP：记住换位前的 top，换完把差值补成 transform 再过渡回 0，滑动更顺 */
+    const tops = new Map<HTMLElement, number>();
+    for (const el of Array.from(grid.querySelectorAll<HTMLElement>('.bar'))) {
+      tops.set(el, el.getBoundingClientRect().top);
+    }
+    orderRef.current = next;
+    setOrder(next);
+    requestAnimationFrame(() => {
+      for (const [el, oldTop] of tops) {
+        if (!el.isConnected) continue;
+        const dy = oldTop - el.getBoundingClientRect().top;
+        if (Math.abs(dy) < 2) continue;
+        el.style.transition = 'none';
+        el.style.transform = `translateY(${dy.toFixed(1)}px)`;
+        requestAnimationFrame(() => {
+          el.style.transition = 'transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1)';
+          el.style.transform = '';
+        });
+      }
     });
   };
 
