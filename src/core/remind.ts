@@ -129,6 +129,7 @@ declare global {
       notify?(title: string, body: string): void;
       askNotify?(): void;
       exactAllowed?(): boolean;
+      setBarsColor?(hex: string): void;
       openExactSettings?(): void;
     };
   }

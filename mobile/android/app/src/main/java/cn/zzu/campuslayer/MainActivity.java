@@ -6,8 +6,10 @@ import android.content.ClipboardManager;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.graphics.Color;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -207,6 +209,64 @@ public class MainActivity extends Activity {
 
     /** 网页 → 壳：一批课前提醒（{at,title,body} 的数组）。JS 接口在各线程回调，切回主线程。 */
     private class NotifyBridge {
+        /**
+         * 页面把当前主题的底色传进来，壳把状态栏 / 导航栏 / 窗口底刷成同色渐变。
+         *
+         * 原来这里写死深色 APP_BG：鸿蒙上底栏是系统画的，米白主题下就露一条黑边。
+         * 现在由网页在换主题时调用，底部系统栏跟着主题走，窗口底再用一层
+         * 「底色 → 略深」的渐变过渡，和页面底栏的渐变接上。
+         */
+        @JavascriptInterface
+        public void setBarsColor(final String hex) {
+            runOnUiThread(new Runnable() {
+                @Override public void run() {
+                    try {
+                        int bg = Color.parseColor(hex);
+                        int bottom = blend(bg, 0xFF000000, 0.10f);
+                        Window win = getWindow();
+                        win.setStatusBarColor(bg);
+                        win.setNavigationBarColor(bottom);
+                        GradientDrawable g = new GradientDrawable(
+                                GradientDrawable.Orientation.TOP_BOTTOM, new int[]{bg, bottom});
+                        win.setBackgroundDrawable(g);
+                        View decor = win.getDecorView();
+                        decor.setBackground(g);
+                        boolean light = luminance(bg) > 0.55;
+                        int flags = decor.getSystemUiVisibility();
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            if (light) flags |= View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+                            else flags &= ~View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+                        }
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                            if (light) flags |= View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+                            else flags &= ~View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+                        }
+                        decor.setSystemUiVisibility(flags);
+                        if (web != null) {
+                            web.setBackgroundColor(bg);
+                            web.invalidate();
+                        }
+                    } catch (Exception ignored) {
+                        /* 颜色解析失败就保持原样 */
+                    }
+                }
+            });
+        }
+
+        private int blend(int a, int b, float t) {
+            int r = Math.round(Color.red(a) * (1 - t) + Color.red(b) * t);
+            int g = Math.round(Color.green(a) * (1 - t) + Color.green(b) * t);
+            int bl = Math.round(Color.blue(a) * (1 - t) + Color.blue(b) * t);
+            return Color.rgb(r, g, bl);
+        }
+
+        private double luminance(int c) {
+            double r = Color.red(c) / 255.0;
+            double g = Color.green(c) / 255.0;
+            double b = Color.blue(c) / 255.0;
+            return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        }
+
         /** 页面 → 壳：立刻弹一条系统通知（有新通知时用）。 */
         /** 图书馆馆级余量（免登录）。 */
         @android.webkit.JavascriptInterface

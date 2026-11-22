@@ -370,6 +370,14 @@ const looksAuthLost = (msg: string): boolean => AUTH_LOST_RE.test(msg);
     }
     applyCustomVars(next === 'custom' ? custom : null);
     syncThemeMeta(next, custom);
+    /* 让安卓/鸿蒙壳把系统栏和窗口底刷成同一主题色（没有壳就忽略） */
+    try {
+      const shell = (window as unknown as { CampusNotify?: { setBarsColor?: (hex: string) => void } }).CampusNotify;
+      const bg = next === 'custom' ? derivePalette(custom).bg : THEME_COLOR[next];
+      shell?.setBarsColor?.(bg);
+    } catch {
+      /* 忽略 */
+    }
   };
   const applyTheme = async (next: ThemeName) => {
     setTheme(next);
