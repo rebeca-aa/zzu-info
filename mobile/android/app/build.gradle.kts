@@ -30,8 +30,10 @@ android {
     applicationId = "cn.zzu.campuslayer"
     minSdk = 24
     targetSdk = 34
-    versionCode = 131
-    versionName = "0.2.146"
+    /* 132：改名后老壳里存的还是旧 Pages 地址（zzu-campus-layer），打开就是 404。
+       版本号必须比上一版大，装过旧包的人下次启动才会看到「有新版」并自己升上来。 */
+    versionCode = 132
+    versionName = "0.2.147"
   }
 
   signingConfigs {
