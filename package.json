@@ -21,7 +21,8 @@
     "pwa:serve": "node scripts/serve-pwa.mjs",
     "pwa:shot": "node scripts/pwa-shot.mjs",
     "pwa:transcript": "node scripts/pwa-transcript.mjs",
-    "verify": "node node_modules/typescript/lib/tsc.js --noEmit && node node_modules/vitest/vitest.mjs run && node node_modules/vite/bin/vite.js build"
+    "verify": "node node_modules/typescript/lib/tsc.js --noEmit && node node_modules/vitest/vitest.mjs run && node node_modules/vite/bin/vite.js build",
+    "userscript:e2e": "node scripts/userscript-e2e.mjs"
   },
   "dependencies": {
     "preact": "^10.24.3",
