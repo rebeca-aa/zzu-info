@@ -879,6 +879,8 @@ function HomeBars(props: {
   const press = useRef<{ key: HomeEntryKey; y: number; timer: number; dragging: boolean } | null>(null);
   const suppressClick = useRef(false);
   const prevOverflow = useRef('');
+  /* 拖到某个位置后先停 0.2 秒再真正换位，避免一路划过去时疯狂重排 */
+  const pendingMove = useRef<{ key: HomeEntryKey; target: number; timer: number } | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -941,6 +943,40 @@ function HomeBars(props: {
     };
   };
 
+  const applyReorder = (key: HomeEntryKey, target: number) => {
+    const grid = gridRef.current;
+    if (!grid) return;
+    const prevOrder = orderRef.current;
+    const vis = prevOrder.filter((k) => visibleMap[k]);
+    const from = vis.indexOf(key);
+    if (from < 0 || from === target) return;
+    const nextVis = [...vis];
+    const [moved] = nextVis.splice(from, 1);
+    nextVis.splice(target, 0, moved!);
+    const next = [...nextVis, ...prevOrder.filter((k) => !nextVis.includes(k))];
+
+    /* FLIP：记住换位前的 top，换完把差值补成 transform 再过渡回 0，滑动更顺 */
+    const tops = new Map<HTMLElement, number>();
+    for (const el of Array.from(grid.querySelectorAll<HTMLElement>('.bar'))) {
+      tops.set(el, el.getBoundingClientRect().top);
+    }
+    orderRef.current = next;
+    setOrder(next);
+    requestAnimationFrame(() => {
+      for (const [el, oldTop] of tops) {
+        if (!el.isConnected) continue;
+        const dy = oldTop - el.getBoundingClientRect().top;
+        if (Math.abs(dy) < 2) continue;
+        el.style.transition = 'none';
+        el.style.transform = `translateY(${dy.toFixed(1)}px)`;
+        requestAnimationFrame(() => {
+          el.style.transition = 'transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1)';
+          el.style.transform = '';
+        });
+      }
+    });
+  };
+
   const movePress = (e: PointerEvent) => {
     const p = press.current;
     if (!p) return;
@@ -970,32 +1006,24 @@ function HomeBars(props: {
     const from = vis.indexOf(p.key);
     if (from < 0) return;
     const clamped = Math.max(0, Math.min(vis.length - 1, target));
-    if (from === clamped) return;
-    const nextVis = [...vis];
-    const [moved] = nextVis.splice(from, 1);
-    nextVis.splice(clamped, 0, moved!);
-    const next = [...nextVis, ...prevOrder.filter((k) => !nextVis.includes(k))];
-
-    /* FLIP：记住换位前的 top，换完把差值补成 transform 再过渡回 0，滑动更顺 */
-    const tops = new Map<HTMLElement, number>();
-    for (const el of Array.from(grid.querySelectorAll<HTMLElement>('.bar'))) {
-      tops.set(el, el.getBoundingClientRect().top);
+    if (from === clamped) {
+      if (pendingMove.current) window.clearTimeout(pendingMove.current.timer);
+      pendingMove.current = null;
+      return;
     }
-    orderRef.current = next;
-    setOrder(next);
-    requestAnimationFrame(() => {
-      for (const [el, oldTop] of tops) {
-        if (!el.isConnected) continue;
-        const dy = oldTop - el.getBoundingClientRect().top;
-        if (Math.abs(dy) < 2) continue;
-        el.style.transition = 'none';
-        el.style.transform = `translateY(${dy.toFixed(1)}px)`;
-        requestAnimationFrame(() => {
-          el.style.transition = 'transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1)';
-          el.style.transform = '';
-        });
-      }
-    });
+    /* 已经在这个目标位上等着了，什么都不用做 */
+    if (pendingMove.current && pendingMove.current.key === p.key && pendingMove.current.target === clamped) {
+      return;
+    }
+    if (pendingMove.current) window.clearTimeout(pendingMove.current.timer);
+    pendingMove.current = {
+      key: p.key,
+      target: clamped,
+      timer: window.setTimeout(() => {
+        pendingMove.current = null;
+        applyReorder(p.key, clamped);
+      }, 200),
+    };
   };
 
   const endPress = () => {
@@ -1003,6 +1031,12 @@ function HomeBars(props: {
     if (p) window.clearTimeout(p.timer);
     press.current = null;
     if (p?.dragging) {
+      const pend = pendingMove.current;
+      if (pend) {
+        window.clearTimeout(pend.timer);
+        pendingMove.current = null;
+        applyReorder(pend.key, pend.target);
+      }
       setDragKey(null);
       document.body.style.overflow = prevOverflow.current;
       void getKV().set(HOME_ORDER_KEY, orderRef.current).catch(() => {
