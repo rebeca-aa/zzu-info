@@ -455,6 +455,7 @@ mobile/android/      安卓壳（Gradle，零第三方依赖）
 3. 跑一遍 `npm run verify`；能动 UI 的话再跑 `npm run e2e` 与 `npm run pwa:shot`。
 
 ## 致谢
+zzu py(illustar0)
 
 **技术栈**
 
