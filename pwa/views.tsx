@@ -1,9 +1,10 @@
-import type { ComponentChildren } from 'preact';
+import { Fragment, type ComponentChildren } from 'preact';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { createPortal } from 'preact/compat';
 import type { Course, Term } from '../src/core/types';
 import { currentWeekOf, diffDays, shanghaiHour, weekdayOf, weekOfDate } from '../src/core/util';
 import { ageText, readCache, writeCache } from '../src/core/offline';
+import { getKV } from '../src/core/kv';
 import { dressAdvice, dressAdviceFor, loadWeather, rainReminder, type Weather, type WeatherIconName } from '../src/core/weather';
 import {
   dueText,
@@ -781,6 +782,29 @@ function isLibraryBar(bar: HomeBar): boolean {
   return isBuiltinBar(bar) && barGlyphOf(bar) === 'book';
 }
 
+type HomeEntryKey = 'hw' | 'room' | 'lib' | 'weather' | 'map';
+
+/** 默认排序：作业 → 空教室 → 图书馆 → 天气 → 校园地图 */
+const DEFAULT_HOME_ORDER: HomeEntryKey[] = ['hw', 'room', 'lib', 'weather', 'map'];
+const HOME_ORDER_KEY = 'homeBarOrder';
+const HOME_ORDER_SET = new Set<HomeEntryKey>(DEFAULT_HOME_ORDER);
+
+function normalizeHomeOrder(raw: unknown): HomeEntryKey[] {
+  const seen = new Set<HomeEntryKey>();
+  const out: HomeEntryKey[] = [];
+  if (Array.isArray(raw)) {
+    for (const item of raw) {
+      if (typeof item !== 'string' || !HOME_ORDER_SET.has(item as HomeEntryKey)) continue;
+      const key = item as HomeEntryKey;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(key);
+    }
+  }
+  for (const key of DEFAULT_HOME_ORDER) if (!seen.has(key)) out.push(key);
+  return out;
+}
+
 function HomeBars(props: {
   bars: HomeBar[];
   onChange: (next: HomeBar[]) => void;
@@ -846,6 +870,240 @@ function HomeBars(props: {
   const roomBars = props.bars.filter(
     (bar) => isBuiltinBar(bar) && !isCardBar(bar) && !isLibraryBar(bar),
   );
+
+  /* 主页快捷入口排序：长按 1 秒进入拖动，松手落盘 */
+  const [order, setOrder] = useState<HomeEntryKey[]>(DEFAULT_HOME_ORDER);
+  const orderRef = useRef<HomeEntryKey[]>(DEFAULT_HOME_ORDER);
+  const [dragKey, setDragKey] = useState<HomeEntryKey | null>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const press = useRef<{ key: HomeEntryKey; y: number; timer: number; dragging: boolean } | null>(null);
+  const suppressClick = useRef(false);
+  const prevOverflow = useRef('');
+
+  useEffect(() => {
+    let alive = true;
+    void (async () => {
+      try {
+        const saved = await getKV().get<unknown>(HOME_ORDER_KEY);
+        if (alive) {
+          const next = normalizeHomeOrder(saved);
+          orderRef.current = next;
+          setOrder(next);
+        }
+      } catch {
+        /* 读不到就用默认顺序 */
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const visibleMap: Record<HomeEntryKey, boolean> = {
+    hw: fixed.homework,
+    room: roomBars.length > 0,
+    lib: Boolean(libraryBar),
+    weather: fixed.weather,
+    map: fixed.map,
+  };
+
+  const beginPress = (e: PointerEvent, key: HomeEntryKey) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    window.clearTimeout(press.current?.timer);
+    /* 抓住指针：拖动时手指/鼠标移到别的条上，事件仍然回到这一条 */
+    try {
+      (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+    } catch {
+      /* 个别环境不支持就算了 */
+    }
+    const y = e.clientY;
+    press.current = {
+      key,
+      y,
+      dragging: false,
+      timer: window.setTimeout(() => {
+        const p = press.current;
+        if (!p) return;
+        p.dragging = true;
+        suppressClick.current = true;
+        setDragKey(key);
+        try {
+          navigator.vibrate?.(15);
+        } catch {
+          /* 不支持震动就算了 */
+        }
+        prevOverflow.current = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        /* 手指/鼠标在拖动结束时可能已经离开这一条，统一在 window 上收尾 */
+        window.addEventListener('pointerup', endPress, { once: true });
+        window.addEventListener('pointercancel', endPress, { once: true });
+      }, 1_000),
+    };
+  };
+
+  const movePress = (e: PointerEvent) => {
+    const p = press.current;
+    if (!p) return;
+    if (!p.dragging) {
+      /* 还没到 1 秒就滑走了：当作滚动，取消长按 */
+      if (Math.abs(e.clientY - p.y) > 12) {
+        window.clearTimeout(p.timer);
+        press.current = null;
+      }
+      return;
+    }
+    e.preventDefault();
+    const grid = gridRef.current;
+    if (!grid) return;
+    const nodes = Array.from(grid.querySelectorAll<HTMLElement>('[data-entry]'));
+    if (!nodes.length) return;
+    let target = nodes.length - 1;
+    for (let i = 0; i < nodes.length; i++) {
+      const r = nodes[i]!.getBoundingClientRect();
+      if (e.clientY < r.top + r.height / 2) {
+        target = i;
+        break;
+      }
+    }
+    setOrder((prev) => {
+      const vis = prev.filter((k) => visibleMap[k]);
+      const from = vis.indexOf(p.key);
+      if (from < 0) return prev;
+      const clamped = Math.max(0, Math.min(vis.length - 1, target));
+      if (from === clamped) return prev;
+      const nextVis = [...vis];
+      const [moved] = nextVis.splice(from, 1);
+      nextVis.splice(clamped, 0, moved!);
+      const next = [...nextVis, ...prev.filter((k) => !nextVis.includes(k))];
+      orderRef.current = next;
+      return next;
+    });
+  };
+
+  const endPress = () => {
+    const p = press.current;
+    if (p) window.clearTimeout(p.timer);
+    press.current = null;
+    if (p?.dragging) {
+      setDragKey(null);
+      document.body.style.overflow = prevOverflow.current;
+      void getKV().set(HOME_ORDER_KEY, orderRef.current).catch(() => {
+        /* 存不上就只在本次生效 */
+      });
+    }
+  };
+
+  const guarded = (fn: () => void) => (e: Event) => {
+    if (suppressClick.current) {
+      suppressClick.current = false;
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+    fn();
+  };
+
+  const dragProps = (key: HomeEntryKey) => ({
+    'data-entry': key,
+    onPointerDown: (e: PointerEvent) => beginPress(e, key),
+    onPointerMove: (e: PointerEvent) => movePress(e),
+    onPointerUp: () => endPress(),
+    onPointerCancel: () => endPress(),
+    onContextMenu: (e: Event) => e.preventDefault(),
+  });
+
+  const renderEntry = (key: HomeEntryKey) => {
+    const cls = (base: string) => `${base}${dragKey === key ? ' dragging' : ''}`;
+    if (key === 'hw' && fixed.homework) {
+      return (
+        <button
+          {...dragProps(key)}
+          type="button"
+          class={cls(`bar bar-tile-hw${props.hwDot ? ' alert' : ''}`)}
+          onClick={guarded(props.onHomework)}
+        >
+          {props.hwDot ? <span class="bar-dot" /> : null}
+          <span class="bar-ic">
+            <BarGlyph name="hw" />
+          </span>
+          <span class="bar-txt">
+            <span class="bar-t">作业</span>
+            <span class="bar-s">{props.hwText}</span>
+          </span>
+        </button>
+      );
+    }
+    if (key === 'room' && roomBars.length > 0) {
+      return (
+        <Fragment key="room">
+          {roomBars.map((bar) => (
+            <button
+              {...dragProps('room')}
+              type="button"
+              class={cls('bar')}
+              key={bar.id}
+              onClick={guarded(() => props.onPick(bar.text))}
+              title={bar.text === bar.label ? undefined : bar.text}
+            >
+              <span class="bar-ic">
+                <BarGlyph name="room" />
+              </span>
+              <span class="bar-txt">
+                <span class="bar-t">{bar.label}</span>
+                <span class="bar-s">{bar.text}</span>
+              </span>
+            </button>
+          ))}
+        </Fragment>
+      );
+    }
+    if (key === 'lib' && libraryBar) {
+      return (
+        <button {...dragProps('lib')} type="button" class={cls('bar')} onClick={guarded(props.onLibrary)}>
+          <span class="bar-ic">
+            <BarGlyph name="book" />
+          </span>
+          <span class="bar-txt">
+            <span class="bar-t">{libraryBar.label}</span>
+            <span class="bar-s">点开看各楼层座位</span>
+          </span>
+        </button>
+      );
+    }
+    if (key === 'weather' && fixed.weather) {
+      return (
+        <button {...dragProps('weather')} type="button" class={cls('bar')} onClick={guarded(props.onWeather)}>
+          <span class="bar-ic">
+            <BarGlyph name="wx" />
+          </span>
+          <span class="bar-txt">
+            <span class="bar-t">天气</span>
+            {wxLine ? <span class="bar-s">{wxLine}</span> : null}
+          </span>
+        </button>
+      );
+    }
+    if (key === 'map' && fixed.map) {
+      return (
+        <button
+          {...dragProps('map')}
+          type="button"
+          class={cls('bar')}
+          onClick={guarded(props.onMap)}
+          title="在新窗口打开校园地理信息服务平台"
+        >
+          <span class="bar-ic">
+            <BarGlyph name="map" />
+          </span>
+          <span class="bar-txt">
+            <span class="bar-t">校园地图</span>
+            <span class="bar-s">找楼栋 · 新窗口打开</span>
+          </span>
+        </button>
+      );
+    }
+    return null;
+  };
 
   const openSheet = () => {
     setError('');
@@ -950,74 +1208,10 @@ function HomeBars(props: {
           +
         </button>
       </div>
-      <div class="bars-grid">
-        {/* 顺序固定：作业 → 空教室 → 图书馆 → 天气；校园卡与备忘录不在主页显示 */}
-        {fixed.homework ? (
-          <button
-            type="button"
-            class={`bar bar-tile-hw${props.hwDot ? ' alert' : ''}`}
-            onClick={props.onHomework}
-          >
-            {props.hwDot ? <span class="bar-dot" /> : null}
-            <span class="bar-ic">
-              <BarGlyph name="hw" />
-            </span>
-            <span class="bar-txt">
-              <span class="bar-t">作业</span>
-              <span class="bar-s">{props.hwText}</span>
-            </span>
-          </button>
-        ) : null}
-        {roomBars.map((bar) => (
-          <button
-            type="button"
-            class="bar"
-            key={bar.id}
-            onClick={() => props.onPick(bar.text)}
-            title={bar.text === bar.label ? undefined : bar.text}
-          >
-            <span class="bar-ic">
-              <BarGlyph name="room" />
-            </span>
-            <span class="bar-txt">
-              <span class="bar-t">{bar.label}</span>
-              <span class="bar-s">{bar.text}</span>
-            </span>
-          </button>
+      <div ref={gridRef} class={`bars-grid${dragKey ? ' reordering' : ''}`}>
+        {order.map((key) => (
+          <Fragment key={key}>{renderEntry(key)}</Fragment>
         ))}
-        {libraryBar ? (
-          <button type="button" class="bar" onClick={props.onLibrary}>
-            <span class="bar-ic">
-              <BarGlyph name="book" />
-            </span>
-            <span class="bar-txt">
-              <span class="bar-t">{libraryBar.label}</span>
-              <span class="bar-s">点开看各楼层座位</span>
-            </span>
-          </button>
-        ) : null}
-        {fixed.weather ? (
-          <button type="button" class="bar" onClick={props.onWeather}>
-            <span class="bar-ic">
-              <BarGlyph name="wx" />
-            </span>
-            <span class="bar-txt">
-              <span class="bar-t">天气</span>
-              {wxLine ? <span class="bar-s">{wxLine}</span> : null}
-            </span>
-          </button>
-        ) : null}
-        {fixed.map ? (
-          <button type="button" class="bar" onClick={props.onMap} title="在新窗口打开校园地理信息服务平台">
-            <span class="bar-ic">
-              <BarGlyph name="map" />
-            </span>
-            <span class="bar-txt">
-              <span class="bar-t">校园地图</span>
-              <span class="bar-s">找楼栋 · 新窗口打开</span>
-            </span>
-          </button>
-        ) : null}
       </div>
       {customBars.map((bar) => (
         <button
