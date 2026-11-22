@@ -5,7 +5,7 @@
  * 这份数据是哪来的——界面上要根据它标「离线课表 · 学期缓存」。
  */
 import { beforeEach, describe, expect, it } from 'vitest';
-import { readSemesterDay } from '../pwa/views';
+import { readSemesterDay, readSemesterWeek } from '../pwa/views';
 import { writeCache } from '../src/core/offline';
 import { weekOfDate, weekdayOf } from '../src/core/util';
 import type { Course } from '../src/core/types';
@@ -93,5 +93,33 @@ describe('今日课表的学期缓存兜底', () => {
 
   it('两种缓存都没有：null', async () => {
     expect(await readSemesterDay(DAY, TERM_START)).toBeNull();
+  });
+});
+
+describe('整周课表的学期缓存兜底', () => {
+  it('有周缓存就用周缓存（它更贴近当时的实况）', async () => {
+    await writeCache(`schedule:week:${WEEK}`, { week: WEEK, courses: [course('周缓存里的课', DOW)] });
+    await writeCache('courses', { termStart: TERM_START, courses: [course('学期缓存里的课', DOW)] });
+
+    const got = await readSemesterWeek(WEEK, TERM_START);
+    expect(got?.from).toBe('week');
+    expect(got?.courses.map((c) => c.name)).toEqual(['周缓存里的课']);
+  });
+
+  it('没有周缓存时从学期缓存拼出整周（跨多天）', async () => {
+    await writeCache('courses', {
+      termStart: TERM_START,
+      courses: [course('周一高数', 1), course('周三英语', 3), course('只在第 1 周', 2, [1])],
+    });
+
+    const got = await readSemesterWeek(WEEK, TERM_START);
+    expect(got?.from).toBe('semester');
+    /* 按教学周过滤：只在第 1 周的课不该出现在第 N 周 */
+    expect(got?.courses.map((c) => c.name)).toEqual(['周一高数', '周三英语']);
+  });
+
+  it('没有学期缓存的 termStart 也推不出来：null', async () => {
+    await writeCache('courses', { courses: [course('周一高数', 1)] });
+    expect(await readSemesterWeek(WEEK)).toBeNull();
   });
 });
