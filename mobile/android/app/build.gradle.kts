@@ -32,8 +32,8 @@ android {
     targetSdk = 34
     /* 132：改名后老壳里存的还是旧 Pages 地址（zzu-campus-layer），打开就是 404。
        版本号必须比上一版大，装过旧包的人下次启动才会看到「有新版」并自己升上来。 */
-    versionCode = 134
-    versionName = "0.2.149"
+    versionCode = 135
+    versionName = "0.2.150"
   }
 
   signingConfigs {

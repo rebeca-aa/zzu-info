@@ -7,11 +7,14 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.drawable.ColorDrawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Base64;
+import android.view.View;
 import android.view.ViewGroup;
+import android.view.Window;
 import android.webkit.CookieManager;
 import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
@@ -35,6 +38,35 @@ import android.widget.Toast;
 public class MainActivity extends Activity {
 
     private static final int REQ_LIB_LOGIN = 3002;
+
+    /** 页面主背景色，和 PWA 的 `--bg: #0f1115` 一致 */
+    private static final int APP_BG = 0xFF0F1115;
+
+    /**
+     * 把状态栏、导航栏、窗口底和 WebView 底都刷成页面同色。
+     *
+     * 为什么要做：壳从来没设过系统栏颜色，导航栏那一块就交给系统画。鸿蒙（以及部分
+     * 精简安卓）会画成浅色/白色，看起来就是底部空出一条白边；而那条不在 WebView 里，
+     * 页面再怎么用 `env(safe-area-inset-bottom)` 也盖不住。从窗口这一层定死颜色，
+     * 露出来的部分才和页面连成一片。
+     *
+     * 同时关掉「浅色系统栏」的标志位（浅色栏会配深色图标，深色底上会看不见）。
+     */
+    private void applyWindowColors() {
+        Window win = getWindow();
+        win.setStatusBarColor(APP_BG);
+        win.setNavigationBarColor(APP_BG);
+        win.setBackgroundDrawable(new ColorDrawable(APP_BG));
+        View decor = win.getDecorView();
+        int flags = decor.getSystemUiVisibility();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            flags &= ~View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            flags &= ~View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+        }
+        decor.setSystemUiVisibility(flags);
+    }
     /** 等登录完成后要补答的那次座位查询（没有登录态时先挂起，不要立刻回错误） */
     private String pendingSeatArea = null;
     private String pendingSeatDate = null;
@@ -74,6 +106,10 @@ public class MainActivity extends Activity {
         web = new WebView(this);
         setContentView(web, new ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
+        /* 鸿蒙底部那条白边见 applyWindowColors 的说明 */
+        applyWindowColors();
+        web.setBackgroundColor(APP_BG);
 
         WebSettings s = web.getSettings();
         s.setJavaScriptEnabled(true);
