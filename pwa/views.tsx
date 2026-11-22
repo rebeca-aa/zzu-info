@@ -225,10 +225,10 @@ const SCHEDULE_CACHE_TTL = 30 * 24 * 3_600_000;
  * 取出某一天该上的课：先看整学期缓存，再看那一周（schedule:week:N）的缓存。
  * 主页按天缓存缺失（换天、20 点翻页、只同步过周课表）时用它兜底。
  */
-async function readSemesterDay(
+export async function readSemesterDay(
   date: string,
   termStart?: string,
-): Promise<{ courses: Course[]; week: number } | null> {
+): Promise<{ courses: Course[]; week: number; from: 'semester' | 'week' } | null> {
   const semester = await readCache<{ courses: Course[]; termStart?: string }>('courses', SCHEDULE_CACHE_TTL);
   const start = termStart ?? semester?.data.termStart;
   if (!start) return null;
@@ -239,14 +239,14 @@ async function readSemesterDay(
     courses.filter((c) => c.weekday === dow && (c.weeks && c.weeks.length ? c.weeks.includes(week) : true));
 
   if (semester && Array.isArray(semester.data.courses)) {
-    return { courses: pick(semester.data.courses), week };
+    return { courses: pick(semester.data.courses), week, from: 'semester' };
   }
   const weekCache = await readCache<{ week: number; courses: Course[] }>(
     `schedule:week:${week}`,
     SCHEDULE_CACHE_TTL,
   );
   if (weekCache && Array.isArray(weekCache.data.courses)) {
-    return { courses: pick(weekCache.data.courses), week };
+    return { courses: pick(weekCache.data.courses), week, from: 'week' };
   }
   return null;
 }
@@ -281,6 +281,9 @@ function writeHomeCache(today: string, data: HomeCache): void {
     /* 存不下就算了，不影响用 */
   }
 }
+
+/** 主页课表的来源：实时 / 当天缓存 / 学期缓存 / 本周缓存 */
+type SchedSource = 'live' | 'cache' | 'semester' | 'week';
 
 export function HomeView(props: {
   today: string;
@@ -317,24 +320,38 @@ export function HomeView(props: {
   const [week, setWeek] = useState<number | null>(cached?.week ?? null);
   const [err, setErr] = useState('');
   const [needLogin, setNeedLogin] = useState(false);
-  /* 当前显示的是缓存课表：不再弹登录/超时提示，安静显示 */
-  const [fromCache, setFromCache] = useState(Boolean(cached));
+  /*
+   * 这屏课表是从哪来的：
+   *  - live     ：实时读到的（正常）
+   *  - cache    ：上次打开时存下的当天课表
+   *  - semester ：实时读不到，从缓存的整学期课表里按日期挑出来的
+   *  - week     ：实时读不到，从缓存的「本周课表」里挑出来的
+   * 后三种都要在卡片上说明，别让人以为看到的是最新数据。
+   */
+  const [source, setSource] = useState<SchedSource>(cached ? 'cache' : 'live');
+  const fromCache = source !== 'live';
 
   useEffect(() => {
     let alive = true;
     setErr('');
     const authFail = (r: { ok: boolean; error?: string }) => !r.ok && /登录/.test(r.error ?? '');
+    /* 屏幕上是否已经有课表：有的话实时失败就安静留着，别清成空 */
+    let shown = cached !== null;
+
+    /** 实时读不到时，从缓存里把这一天的课捞出来；返回是否捞到了 */
+    const useFallback = async (): Promise<boolean> => {
+      const fb = await readSemesterDay(props.today, props.termStart);
+      if (!alive || !fb) return false;
+      setCourses(fb.courses);
+      setWeek(fb.week);
+      setSource(fb.from);
+      setErr('');
+      shown = true;
+      return true;
+    };
 
     /* 当天缓存缺失时，先用学期缓存里这一天的课把主页铺上 */
-    if (!cached) {
-      void (async () => {
-        const fb = await readSemesterDay(props.today, props.termStart);
-        if (!alive || !fb) return;
-        setCourses(fb.courses);
-        setWeek(fb.week);
-        setFromCache(true);
-      })();
-    }
+    if (!cached) void useFallback();
 
     /* 课表排在第一个、单独一条：它最快回来，回来就立刻渲染 */
     void (async () => {
@@ -349,11 +366,20 @@ export function HomeView(props: {
           const wk = typeof payload?.week === 'number' ? payload.week : undefined;
           setCourses(list);
           setWeek(typeof payload?.week === 'number' ? payload.week : null);
-          setFromCache(false);
+          setSource('live');
+          shown = true;
           void mergeSemesterCache(list, props.today, wk, props.termStart);
         } else {
-          /* 拉不到就先留着缓存里的那节课，只提示一句，别把页面清成「今天没有课」 */
-          setErr(sched.error ?? '');
+          /* 实时读不到：没有现成的课表铺着，就从缓存的学期课表里挑今天的；
+             挑到了就在卡片上标明来源，挑不到才把错误说出来 */
+          void (async () => {
+            if (shown) {
+              setErr('');
+              return;
+            }
+            const ok = await useFallback();
+            if (!ok && alive) setErr(sched.error ?? '');
+          })();
         }
       };
       const timeout = new Promise<never>((_, reject) => {
@@ -362,14 +388,9 @@ export function HomeView(props: {
       try {
         apply(await Promise.race([live, timeout]));
       } catch {
-        /* 不弹提示：直接安静地用缓存把这一天的课表铺上 */
+        /* 3 秒没回来：有学期缓存就先铺上，同样标明来源 */
         void (async () => {
-          const fb = await readSemesterDay(props.today, props.termStart);
-          if (alive && fb) {
-            setCourses(fb.courses);
-            setWeek(fb.week);
-            setFromCache(true);
-          }
+          if (!shown) await useFallback();
         })();
         /* 晚到的实时课表直接替换当前缓存和倒计时 */
         live.then((r) => apply(r)).catch(() => {});
@@ -473,7 +494,20 @@ export function HomeView(props: {
           <div class="cardhead">
             <strong>
               {rolled ? '明日课表' : '今日课表'}
-              {fromCache ? <em class="offline-tag">离线课表</em> : null}
+              {fromCache ? (
+                <em
+                  class="offline-tag"
+                  title={
+                    source === 'semester'
+                      ? '实时课表没读到，这条是从缓存的整学期课表里按日期挑出来的'
+                      : source === 'week'
+                        ? '实时课表没读到，这条用的是缓存的「本周课表」'
+                        : '实时课表没读到，这条是上次打开时存下的'
+                  }
+                >
+                  {source === 'semester' ? '离线课表 · 学期缓存' : '离线课表'}
+                </em>
+              ) : null}
             </strong>
             <span class="ch-right">
               本周课表
