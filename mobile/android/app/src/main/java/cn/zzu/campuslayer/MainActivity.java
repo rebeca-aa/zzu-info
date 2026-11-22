@@ -252,6 +252,19 @@ public class MainActivity extends Activity {
             runOnUiThread(MainActivity.this::openLogin);
         }
 
+        /**
+         * 网页要打开外部站点（比如校园地图）。WebView 里 window.open 不生效
+         * （没开 setSupportMultipleWindows），所以交给系统浏览器，
+         * 顺带复用浏览器里已经登好的那份会话。
+         */
+        @JavascriptInterface
+        public void openUrl(String url) {
+            if (url == null) return;
+            final String u = url.trim();
+            if (!u.startsWith("https://") && !u.startsWith("http://")) return;
+            runOnUiThread(() -> openInBrowser(u));
+        }
+
         @JavascriptInterface
         public void setReminders(String json) {
             runOnUiThread(() -> {

@@ -176,11 +176,17 @@ describe('天气 / 作业 / 图书馆开关', () => {
   });
 
   it('只认布尔值，缺的字段按默认开', async () => {
-    expect(normalizeHomeBarFixed({ weather: false })).toEqual({ library: true, weather: false, homework: true });
+    expect(normalizeHomeBarFixed({ weather: false })).toEqual({
+      library: true,
+      weather: false,
+      homework: true,
+      map: true,
+    });
     expect(normalizeHomeBarFixed({ library: 'x', homework: false })).toEqual({
       library: true,
       weather: true,
       homework: false,
+      map: true,
     });
     expect(normalizeHomeBarFixed(undefined)).toBeUndefined();
     expect(normalizeHomeBarFixed([])).toBeUndefined();
@@ -188,8 +194,18 @@ describe('天气 / 作业 / 图书馆开关', () => {
 
   it('存进去再读出来是同一份', async () => {
     const kv = memKV();
-    const saved = await saveHomeBarFixed({ library: false, weather: true, homework: false }, kv);
-    expect(saved).toEqual({ library: false, weather: true, homework: false });
+    const saved = await saveHomeBarFixed({ library: false, weather: true, homework: false, map: false }, kv);
+    expect(saved).toEqual({ library: false, weather: true, homework: false, map: false });
     expect(await loadHomeBarFixed(kv)).toEqual(saved);
+  });
+
+  it('老版本存的开关没有 map 字段：按默认开着补上', async () => {
+    const kv = memKV({ [HOME_BAR_FIXED_KEY]: { library: true, weather: false, homework: true } });
+    expect(await loadHomeBarFixed(kv)).toEqual({
+      library: true,
+      weather: false,
+      homework: true,
+      map: true,
+    });
   });
 });

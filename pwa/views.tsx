@@ -329,6 +329,8 @@ export function HomeView(props: {
   onWeather: () => void;
   /** 点「图书馆」条进座位图页（这条不再把话发给 AI） */
   onLibrary: () => void;
+  /** 点「校园地图」条：新窗口打开学校的微地图（站点禁止内嵌，只能跳转） */
+  onMap: () => void;
   /** 作业块：一行文案 + 逾期红点；点进作业页 */
   hw?: { text: string; dot?: boolean } | null;
   onHomework: () => void;
@@ -614,6 +616,7 @@ export function HomeView(props: {
           onCardClick={loadCard}
           onWeather={props.onWeather}
           onLibrary={props.onLibrary}
+          onMap={props.onMap}
           hwText={props.hw?.text ?? '还没作业'}
           hwDot={Boolean(props.hw?.dot)}
           onHomework={props.onHomework}
@@ -682,7 +685,7 @@ function draftOf(bars: HomeBar[]): BarDraft[] {
   });
 }
 
-type BarGlyphName = 'book' | 'room' | 'card' | 'wx' | 'chat' | 'hw' | 'plus';
+type BarGlyphName = 'book' | 'room' | 'card' | 'wx' | 'chat' | 'hw' | 'map' | 'plus';
 
 function BarGlyph({ name }: { name: BarGlyphName }) {
   const common = {
@@ -701,6 +704,16 @@ function BarGlyph({ name }: { name: BarGlyphName }) {
       <svg {...common}>
         <path d="M12 6.4c-1.5-1.3-3.5-2-5.9-2H4.4v13h1.7c2.4 0 4.4.7 5.9 2 1.5-1.3 3.5-2 5.9-2h1.7v-13h-1.7c-2.4 0-4.4.7-5.9 2z" />
         <path d="M12 6.4v13" />
+      </svg>
+    );
+  }
+  if (name === 'map') {
+    /* 地图：折三折的纸 + 定位点 */
+    return (
+      <svg {...common}>
+        <path d="M9 4.8 4.4 6.6v13l4.6-1.8 6 1.8 4.6-1.8v-13L15 6.6 9 4.8Z" />
+        <path d="M9 4.8v13M15 6.6v13" />
+        <circle cx="12" cy="11.4" r="1.6" />
       </svg>
     );
   }
@@ -780,6 +793,8 @@ function HomeBars(props: {
   onWeather: () => void;
   /** 点图书馆条进座位图页 */
   onLibrary: () => void;
+  /** 点地图条：新窗口打开学校微地图 */
+  onMap: () => void;
   /** 作业：一行文字 + 逾期红点 */
   hwText: string;
   hwDot: boolean;
@@ -992,6 +1007,17 @@ function HomeBars(props: {
             </span>
           </button>
         ) : null}
+        {fixed.map ? (
+          <button type="button" class="bar" onClick={props.onMap} title="在新窗口打开校园地理信息服务平台">
+            <span class="bar-ic">
+              <BarGlyph name="map" />
+            </span>
+            <span class="bar-txt">
+              <span class="bar-t">校园地图</span>
+              <span class="bar-s">找楼栋 · 新窗口打开</span>
+            </span>
+          </button>
+        ) : null}
       </div>
       {customBars.map((bar) => (
         <button
@@ -1010,7 +1036,12 @@ function HomeBars(props: {
           </span>
         </button>
       ))}
-      {!libraryBar && roomBars.length === 0 && customBars.length === 0 && !fixed.weather && !fixed.homework ? (
+      {!libraryBar &&
+      roomBars.length === 0 &&
+      customBars.length === 0 &&
+      !fixed.weather &&
+      !fixed.homework &&
+      !fixed.map ? (
         <p class="bars-empty">主页入口都藏起来了：点右上角 + 打开「显示」重新勾上。</p>
       ) : null}
       {sheet
@@ -1079,6 +1110,22 @@ function HomeBars(props: {
                       <span class="bs-sw-t">
                         作业
                         <em>截止提醒 + 逾期红点</em>
+                      </span>
+                      <span class="bs-knob" aria-hidden="true" />
+                    </button>
+                    <button
+                      type="button"
+                      class={`bs-sw${sheet.fixed.map ? ' on' : ''}`}
+                      role="switch"
+                      aria-checked={sheet.fixed.map}
+                      onClick={() => toggleFixed('map')}
+                    >
+                      <span class="bs-sw-ic">
+                        <BarGlyph name="map" />
+                      </span>
+                      <span class="bs-sw-t">
+                        校园地图
+                        <em>新窗口打开微地图</em>
                       </span>
                       <span class="bs-knob" aria-hidden="true" />
                     </button>

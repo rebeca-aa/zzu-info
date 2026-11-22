@@ -214,12 +214,19 @@ export interface HomeBarFixed {
   library: boolean;
   weather: boolean;
   homework: boolean;
+  /** 校园地图：没有内嵌，点开是在新窗口打开学校的微地图 */
+  map: boolean;
 }
 
 export const HOME_BAR_FIXED_KEY = 'homeBarFixed';
 
 /** 默认都开着：全新安装 / 老版本没存过这份开关 */
-export const DEFAULT_HOME_BAR_FIXED: HomeBarFixed = { library: true, weather: true, homework: true };
+export const DEFAULT_HOME_BAR_FIXED: HomeBarFixed = {
+  library: true,
+  weather: true,
+  homework: true,
+  map: true,
+};
 
 /** 洗一遍开关：只认布尔值，缺的按默认开。 */
 export function normalizeHomeBarFixed(raw: unknown): HomeBarFixed | undefined {
@@ -230,6 +237,7 @@ export function normalizeHomeBarFixed(raw: unknown): HomeBarFixed | undefined {
     library: pick(o.library, DEFAULT_HOME_BAR_FIXED.library),
     weather: pick(o.weather, DEFAULT_HOME_BAR_FIXED.weather),
     homework: pick(o.homework, DEFAULT_HOME_BAR_FIXED.homework),
+    map: pick(o.map, DEFAULT_HOME_BAR_FIXED.map),
   };
 }
 

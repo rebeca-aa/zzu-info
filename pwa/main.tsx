@@ -117,6 +117,24 @@ const CAS_LOGIN_PORTAL =
 
 const TERM_CACHE_KEY = 'zzu-info:termCache';
 
+/**
+ * 学校校园地理信息服务平台的「微地图」。
+ *
+ * 站点响应带 `X-Frame-Options: SAMEORIGIN`，任何 iframe 都嵌不进来，
+ * 所以只能新开窗口打开；登录态靠浏览器自己那份会话，登过一次就不用再登。
+ */
+const CAMPUS_MAP_URL = 'https://ksh-ms.v.zzu.edu.cn/#/';
+
+/** 打开外部链接：安卓壳里有原生桥就走系统浏览器，网页里就开新标签页。 */
+function openExternal(url: string): void {
+  const bridge = (window as { CampusNotify?: { openUrl?: (u: string) => void } }).CampusNotify;
+  if (bridge?.openUrl) {
+    bridge.openUrl(url);
+    return;
+  }
+  window.open(url, '_blank', 'noopener,noreferrer');
+}
+
 /** 学期信息落一份本地缓存：接口抖一下也不至于把课表页打回「第 1 周」。 */
 const COURSE_TIMEOUT_MS = 3_000;
 
@@ -1420,6 +1438,7 @@ const looksAuthLost = (msg: string): boolean => AUTH_LOST_RE.test(msg);
               setNavDir('fwd');
               goTab('seat');
             }}
+            onMap={() => openExternal(CAMPUS_MAP_URL)}
             hw={hwTile}
             onHomework={() => openSub('homework')}
             bars={homeBars}
