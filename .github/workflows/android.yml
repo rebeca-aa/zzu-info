@@ -92,11 +92,15 @@ jobs:
             gh release create build-logs --title "构建日志" --notes "安卓壳构建日志（失败时看这里）" --target main
           gh release upload build-logs gradle-build.log --clobber || true
 
+      # 这一步只是给「登录了 GitHub」的人多一个下载口子。它曾经整步失败，
+      # 把后面真正的发布（Release，免登录下载）连带跳过，老用户就拿不到新包——
+      # 所以这里允许失败：artifact 传不上去不该影响发布。
       - uses: actions/upload-artifact@v4
+        continue-on-error: true
         with:
           name: zzu-info-debug-apk
           path: mobile/android/app/build/outputs/apk/debug/*.apk
-          if-no-files-found: error
+          if-no-files-found: warn
 
       # 除了 Actions 里的 artifact（下载要登录），再发一份到滚动 tag 的 Release，
       # 这样手机上不登 GitHub 也能直接点链接装。
