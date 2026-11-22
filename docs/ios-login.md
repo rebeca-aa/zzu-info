@@ -12,6 +12,18 @@
 所以网页端拿不到 30 天票；8 小时的 CAS 票也只能「登录完落在学校那一页，再自己取回来」。
 安卓壳能用 30 天票，是因为它走原生 HTTP，不受 CORS 约束；桌面扩展是有 `host_permissions`。
 
+## ⚠️ 未验证：主屏幕 PWA 能不能用
+
+下面的方案在**桌面 Edge 里验证过**（`npm run userscript:e2e`），但有两件事**没在真机 iOS 上验证**，
+结论可能是「只能在 Safari 标签页里用」：
+
+1. **主屏幕 PWA 与 Safari 的本地存储在 iOS 上是隔离的**。票被导入到「跳回来的那个上下文」，
+   如果那是 Safari 而不是主屏幕里的 App，主屏幕的 App 仍是未登录。
+2. **Safari 扩展在主屏幕 Web App 窗口里是否生效**不确定，登录页是在应用内弹出还是跳到 Safari，也不确定。
+
+验收步骤见 [ios-test-plan.md](ios-test-plan.md)（T6 / T7 / T8 是决定性的）。
+在有结论之前，**不要对用户承诺「iOS 主屏幕版可以自动登录」**。
+
 ## 自动取票脚本（推荐）
 
 装一次，之后登录和续期都不用手动复制地址。
@@ -58,6 +70,10 @@ App 那条 `#token=` 通道会解析这个 JWT、取出 `idToken`，写进教务
 ```js
 javascript:(()=>{const t=new URLSearchParams(location.search).get('ticket');if(!t){alert('这一页没有 ticket');return}location.replace('https://rebeca-aa.github.io/zzu-info/pwa/index.html#token='+encodeURIComponent(t))})()
 ```
+
+## 验收
+
+交给有 Mac / iPhone 的同学：[ios-test-plan.md](ios-test-plan.md)。
 
 ## 想彻底对齐安卓壳
 
