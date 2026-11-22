@@ -20,7 +20,7 @@ const SHOTS = abs('../');
 const CDP_PORT = 9336;
 const WEB_PORT = 8902;
 const BASE = `http://127.0.0.1:${WEB_PORT}`;
-const KEY = 'campus-layer:transcript';
+const KEY = 'zzu-info:transcript';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 

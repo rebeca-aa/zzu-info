@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "郑大校园信息层",
+  "name": "郑大信息",
   "version": "0.3.11",
   "description": "在你自己的校园账号下，把课表、通知、空教室、成绩收进一个侧边栏。",
   "minimum_chrome_version": "114",
@@ -35,7 +35,7 @@
     "type": "module"
   },
   "action": {
-    "default_title": "郑大校园信息层"
+    "default_title": "郑大信息"
   },
   "side_panel": {
     "default_path": "sidepanel/index.html"

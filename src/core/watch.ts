@@ -118,5 +118,5 @@ export function buildDigest(args: {
     if (d) parts.push(`${d.title.slice(0, 18)}${d.daysLeft === 0 ? '今天截止' : `还有 ${d.daysLeft} 天`}`);
   }
   if (parts.length === 0) return null;
-  return { title: '校园信息层 · 今日提醒', body: parts.join('；') };
+  return { title: '郑大信息 · 今日提醒', body: parts.join('；') };
 }

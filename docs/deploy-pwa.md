@@ -4,8 +4,8 @@
 >
 > **前置：先拿到 `dist/`。** 它**不在仓库里**（构建产物不入库，避免每次提交一堆带 hash 的 chunk）。两种拿法：
 >
-> - **装了 Node**：`cd campus-layer && npm install --ignore-scripts && npm run build`，产物在 `campus-layer/dist/`；
-> - **没装 Node**：直接下 [campus-layer-dist.zip](https://github.com/rebeca-aa/zzu-campus-layer/releases/download/dist-latest/campus-layer-dist.zip)（不需要登录），解压出来的内容等同于 `dist/`；每次推 `main` 会被自动覆盖更新，见 [releases](https://github.com/rebeca-aa/zzu-campus-layer/releases/latest)。
+> - **装了 Node**：`cd zzu-info && npm install --ignore-scripts && npm run build`，产物在 `zzu-info/dist/`；
+> - **没装 Node**：直接下 [zzu-info-dist.zip](https://github.com/rebeca-aa/zzu-info/releases/download/dist-latest/zzu-info-dist.zip)（不需要登录），解压出来的内容等同于 `dist/`；每次推 `main` 会被自动覆盖更新，见 [releases](https://github.com/rebeca-aa/zzu-info/releases/latest)。
 
 ## 为什么是静态托管
 
@@ -27,14 +27,14 @@ PWA 要能"加到主屏幕"，浏览器要求它跑在**安全上下文**（HTTP
 ### A. Cloudflare Pages（推荐：免费、免登录域名、传就完事）
 
 1. 打开 <https://pages.cloudflare.com> → Create → **Upload assets**（不用接 Git）。
-2. 起个项目名，比如 `campus`，把 `campus-layer/dist/` **里面的内容**整个拖进去（不是拖 dist 目录本身）。
+2. 起个项目名，比如 `campus`，把 `zzu-info/dist/` **里面的内容**整个拖进去（不是拖 dist 目录本身）。
 3. 得到 `https://campus.pages.dev`，打开 → 右上角「登录态」→ 粘同步码。
 4. 手机 Chrome：地址栏右侧「⋮」→ **添加到主屏幕**。
 
 命令行版（有 Node 即可，不需要常开机器）：
 
 ```bash
-npx wrangler pages deploy campus-layer/dist --project-name campus
+npx wrangler pages deploy zzu-info/dist --project-name campus
 ```
 
 ### B. GitHub Pages（仓库已内置 workflow，推荐）
@@ -78,7 +78,7 @@ npx wrangler pages deploy campus-layer/dist --project-name campus
 本机已经有一层自动断言（`npm run pwa:shot`，无头 Edge + 390×844）：安全上下文、manifest 的 `name/display: standalone/start_url/icons`、service worker 是否注册并接管页面。当前实测输出：
 
 ```json
-{"secure":true,"manifest":{"name":"校园信息层","short":"校园信息","display":"standalone","start":"./index.html","icons":3},
+{"secure":true,"manifest":{"name":"郑大信息","short":"校园信息","display":"standalone","start":"./index.html","icons":3},
  "sw":["http://127.0.0.1:8899/pwa/"],"controlled":true}
 ```
 
@@ -96,7 +96,7 @@ manifest 里 `display: standalone`；如果仍是浏览器界面，多半是 man
 教务票 30 天、门户票 8 小时。教务票够用；过期后回电脑打开扩展侧边栏 ⚙ → 「生成手机同步码」→ 重新粘一次。
 
 **Q: 我填了第三方 key，安全吗？**
-key 只存在手机 `localStorage`（键前缀 `campus-layer:`），代码里没有上报通道（`credentials: 'omit'`，只往你选的服务商发）。但：**部署在谁的域名上，谁就能读到** —— 所以用自己的账号部署，别用别人给的站点。同步码里也会带 key，别发群。
+key 只存在手机 `localStorage`（键前缀 `zzu-info:`），代码里没有上报通道（`credentials: 'omit'`，只往你选的服务商发）。但：**部署在谁的域名上，谁就能读到** —— 所以用自己的账号部署，别用别人给的站点。同步码里也会带 key，别发群。
 
 **Q: 能改成真正安装的 APK 吗？**
 可以，但**没必要**：PWA 加到主屏幕后是全屏、独立图标、可离线开壳，观感与 APK 基本一致。真要 APK 可用 [PWABuilder](https://www.pwabuilder.com/) 把同一个站点包成 TWA，仍然不需要服务器。

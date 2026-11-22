@@ -24,7 +24,9 @@ import javax.crypto.spec.GCMParameterSpec;
  */
 final class SecretStore {
     private static final String KEYSTORE = "AndroidKeyStore";
-    private static final String ALIAS = "campus-layer-secret-v1";
+    private static final String ALIAS = "zzu-info-secret-v1";
+    /** 改名前的钥匙别名：老用户机器上已有的那把还叫这个，认它才解得开旧密文 */
+    private static final String LEGACY_ALIAS = "campus" + "-layer-secret-v1";
     private static final String TRANSFORM = "AES/GCM/NoPadding";
     private static final String PREFIX = "v1:";
     private static final int TAG_BITS = 128;
@@ -37,6 +39,14 @@ final class SecretStore {
         if (ks.containsAlias(ALIAS)) {
             java.security.Key existing = ks.getKey(ALIAS, null);
             if (existing instanceof SecretKey) return (SecretKey) existing;
+        }
+        /* 改名发生在老用户已经存过密文之后：新别名下没有钥匙，但旧密文是用老别名那把封的。
+           不认老别名的话，换名后第一次解密就失败，用户的图书馆登录会被当成「没存过」。 */
+        if (ks.containsAlias(LEGACY_ALIAS)) {
+            java.security.Key legacy = ks.getKey(LEGACY_ALIAS, null);
+            /* 不搬、也不删：AndroidKeyStore 的钥匙导不出裸字节，没法换个别名重存一份。
+               直接认它，老用户的图书馆 token 照样解得开。 */
+            if (legacy instanceof SecretKey) return (SecretKey) legacy;
         }
         KeyGenerator gen = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, KEYSTORE);
         gen.init(new KeyGenParameterSpec.Builder(

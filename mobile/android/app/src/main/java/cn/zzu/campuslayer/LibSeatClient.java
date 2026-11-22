@@ -27,7 +27,7 @@ import java.nio.charset.StandardCharsets;
  */
 final class LibSeatClient {
     private static final String API = "http://order.lib.zzu.edu.cn/v4/Space/seat";
-    private static final String PREFS = "campus_layer";
+    private static final String PREFS = "zzu_info";
     /** 老版本存明文的键（只在迁移时读一次） */
     private static final String KEY_TOKEN_LEGACY = "lib_token";
     /** 加密后的 token（SecretStore 封出来的 v1: 信封） */

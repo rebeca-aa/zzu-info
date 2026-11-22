@@ -377,7 +377,7 @@ function App() {
   return (
     <div class="app">
       <header>
-        <h1>校园信息层</h1>
+        <h1>郑大信息</h1>
         <button
           class={`gear${view === 'notices' ? ' on' : ''}`}
           style={{ right: '42px' }}

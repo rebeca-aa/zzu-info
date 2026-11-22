@@ -72,7 +72,7 @@ export function coursesToIcs(courses: Course[], opts: IcsOptions): string {
   const lines: string[] = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//zzu-campus-layer//course table//CN',
+    'PRODID:-//zzu-info//course table//CN',
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
     'X-WR-CALNAME:郑大课表 ' + opts.term.code,
@@ -154,7 +154,7 @@ export function noticesToIcs(cards: NoticeCard[], opts: NoticeIcsOptions = {}): 
   const lines: string[] = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//zzu-campus-layer//notices//CN',
+    'PRODID:-//zzu-info//notices//CN',
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
     'X-WR-CALNAME:郑大通知',

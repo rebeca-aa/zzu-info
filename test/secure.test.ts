@@ -17,8 +17,10 @@ function installLocalStorage(): void {
     setItem: (k: string, v: string) => void mem.set(k, v),
     removeItem: (k: string) => void mem.delete(k),
     clear: () => mem.clear(),
-    key: () => null,
-    length: 0,
+    key: (i: number) => [...mem.keys()][i] ?? null,
+    get length() {
+      return mem.size;
+    },
   } as unknown as Storage;
 }
 
@@ -28,7 +30,7 @@ async function newKey(): Promise<CryptoKey> {
 
 /** 存储里那条原始记录（模拟「有人把 localStorage 拷走」） */
 function storedRaw(key: string): unknown {
-  const raw = mem.get(`campus-layer:${key}`);
+  const raw = mem.get(`zzu-info:${key}`);
   return raw ? JSON.parse(raw) : undefined;
 }
 
@@ -91,7 +93,7 @@ describe('读写与迁移', () => {
 
   it('读到老明文会顺手迁成密文', async () => {
     __setSecureKeyForTest(await newKey());
-    mem.set('campus-layer:appCreds', JSON.stringify({ account: 'a', password: 'old' }));
+    mem.set('zzu-info:appCreds', JSON.stringify({ account: 'a', password: 'old' }));
     expect(await readSecure<{ password: string }>('appCreds')).toEqual({ account: 'a', password: 'old' });
     await new Promise((r) => setTimeout(r, 10));
     expect(isSealed(storedRaw('appCreds'))).toBe(true);
@@ -100,6 +102,46 @@ describe('读写与迁移', () => {
   it('没存过就是 undefined', async () => {
     __setSecureKeyForTest(await newKey());
     expect(await readSecure('appCreds')).toBeUndefined();
+  });
+});
+
+/*
+ * 改名（campus-layer → zzu-info）之后，用户设备上留下的还是老键名、老 AAD 的密文。
+ * 这两条守住「升级不丢登录态」——丢了的话，所有人升级后都像第一次装。
+ */
+describe('改名前存下的数据还能读', () => {
+  it('老键名的明文会搬到新键名下', async () => {
+    __setSecureKeyForTest(await newKey());
+    mem.set('campus-layer:appCreds', JSON.stringify({ account: 'a', password: 'old' }));
+
+    expect(await readSecure<{ password: string }>('appCreds')).toEqual({ account: 'a', password: 'old' });
+    expect(mem.has('campus-layer:appCreds')).toBe(false);
+    expect(mem.has('zzu-info:appCreds')).toBe(true);
+  });
+
+  it('老 AAD 封的密文能解开，并按新 AAD 重新封', async () => {
+    const key = await newKey();
+    __setSecureKeyForTest(key);
+
+    /* 造一份「改名前的信封」：AAD 用的是老前缀 */
+    const iv = new Uint8Array(new ArrayBuffer(12));
+    globalThis.crypto.getRandomValues(iv);
+    const ct = await globalThis.crypto.subtle.encrypt(
+      { name: 'AES-GCM', iv, additionalData: new TextEncoder().encode('campus-layer:appCreds') },
+      key,
+      new TextEncoder().encode(JSON.stringify({ account: 'a', password: 'old' })),
+    );
+    const b64 = (b: Uint8Array) => Buffer.from(b).toString('base64');
+    mem.set(
+      'zzu-info:appCreds',
+      JSON.stringify({ v: 2, alg: 'AES-GCM', iv: b64(iv), ct: b64(new Uint8Array(ct)) }),
+    );
+
+    expect(await readSecure<{ password: string }>('appCreds')).toEqual({ account: 'a', password: 'old' });
+
+    /* 重封之后，新 AAD 能直接解开（不再依赖老 AAD 兜底） */
+    const now = storedRaw('appCreds');
+    expect(await open('appCreds', now as never)).toEqual({ account: 'a', password: 'old' });
   });
 });
 

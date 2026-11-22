@@ -164,7 +164,7 @@ async function main() {
       .toString('base64')
       .replace(/=+$/, '');
 
-    await cdp.eval(`localStorage.removeItem('campus-layer:tokens'); 0`);
+    await cdp.eval(`localStorage.removeItem('zzu-info:tokens'); 0`);
     await cdp.send('Page.reload');
     await sleep(1500);
 
@@ -187,7 +187,7 @@ async function main() {
       chip: document.querySelector('header .chip')?.textContent ?? '',
       sheetOpen: !!document.querySelector('.sheet'),
       note: document.querySelector('.note')?.textContent ?? '',
-      llm: (() => { try { return JSON.parse(localStorage.getItem('campus-layer:llm') || '{}'); } catch { return {}; } })(),
+      llm: (() => { try { return JSON.parse(localStorage.getItem('zzu-info:llm') || '{}'); } catch { return {}; } })(),
     }))()`);
     console.log('import:', JSON.stringify({ before, codeLen: code.length, ...after }));
     await shot('pwa-home.png');

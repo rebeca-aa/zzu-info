@@ -384,7 +384,7 @@ npm run app:ticket -- --json       # {"idToken": "…", "leftH": 719.9, …}
 | 宿主 | 能不能直接调 `/token/` | 做法 |
 | --- | --- | --- |
 | 浏览器扩展 | **能**（`host_permissions` 含 `cas.s.zzu.edu.cn`，不受 CORS 限制） | `src/core/renew.ts` 的 `mintIntoSession()` 先试 `mintViaApp()`（`src/core/appMint.ts`：手写 RSA PKCS#1 v1.5 + 原生 `fetch`），失败再落 `/cas/` fetch 快路；绑定跑 `src/core/appBind.ts` |
-| PWA（网页） | **不能**：`cas.s.zzu.edu.cn/token/*` 没有任何 `Access-Control-Allow-Origin`，预检 403 | 设置里填学号密码（存 `localStorage` 的 `campus-layer:appCreds`），绑定与换票都交给壳；页面上是同一个 `<AppCreds />`，只是走了 `CampusNotify.appBindStart/appBindSubmit` 这条桥 |
+| PWA（网页） | **不能**：`cas.s.zzu.edu.cn/token/*` 没有任何 `Access-Control-Allow-Origin`，预检 403 | 设置里填学号密码（存 `localStorage` 的 `zzu-info:appCreds`），绑定与换票都交给壳；页面上是同一个 `<AppCreds />`，只是走了 `CampusNotify.appBindStart/appBindSubmit` 这条桥 |
 | 安卓壳 | **能**（原生） | `AppMint.java` 换票、`AppBind.java` 发/校短信；读 PWA 的 `localStorage` 凭据 → 交给页面 `__campusImport`；失败才退 `CasMint`，再失败才开登录页 |
 
 于是安卓端的续票顺序是 **AppMint（30 天，静默）→ CasMint（8 小时，靠 TGC）→ 登录页（要人工 MFA）**；

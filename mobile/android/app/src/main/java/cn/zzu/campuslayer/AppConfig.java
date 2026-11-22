@@ -5,7 +5,7 @@ package cn.zzu.campuslayer;
  */
 final class AppConfig {
     /** 主界面加载的 PWA（换成自己的 Pages 地址也行）。 */
-    static final String APP_URL = "https://rebeca-aa.github.io/zzu-campus-layer/pwa/index.html";
+    static final String APP_URL = "https://rebeca-aa.github.io/zzu-info/pwa/index.html";
 
     /**
      * 登录入口。

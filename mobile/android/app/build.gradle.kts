@@ -13,7 +13,13 @@ plugins {
  * 更新通道（Release 上的 shell.json + APK）都由仓库的控制者掌握，
  * 别人就算用同一把钥匙签一个包，也发不到我们用户的手机上。
  */
-val keystoreFile = file("campus-layer.p12")
+/*
+ * 文件名跟着项目改成了 zzu-info.p12，但**钥匙内部的别名和口令没动**（还是 campus-layer
+ * 那套）。原因：这两样写在 p12 文件里，改它们得用 keytool 重写整个文件；一旦改错或
+ * 重新生成钥匙，Android 就不允许覆盖安装，老用户只能卸载重装、数据全丢。
+ * 名字只是个内部字符串，不影响任何对外可见的东西——保持原样最安全。
+ */
+val keystoreFile = file("zzu-info.p12")
 val keystorePass = "campus-layer-sign"
 
 android {
@@ -36,6 +42,7 @@ android {
         storeFile = keystoreFile
         storeType = "PKCS12"
         storePassword = keystorePass
+        /* 必须和 p12 里的别名一致（见上面那段说明），不能顺手改成新名字 */
         keyAlias = "campus-layer"
         keyPassword = keystorePass
       }

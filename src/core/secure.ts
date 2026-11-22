@@ -8,7 +8,7 @@
  *
  * 钥匙从哪来：`crypto.subtle.generateKey` 生成一把 **AES-GCM 256** 的
  * `CryptoKey`，`extractable: false` —— 读不出裸字节，只能拿它做加密解密。
- * 它存在 IndexedDB 的密钥库里（库 `campus-layer-secure`、store `keys`、
+ * 它存在 IndexedDB 的密钥库里（库 `zzu-info-secure`、store `keys`、
  * 键 `device`），和站点数据一起被清掉、一起被备份。
  *
  * 代价（想清楚再改）：
@@ -21,10 +21,12 @@
  * 也不要让用户填不了密码。
  */
 
-import { getKV } from './kv';
+import { getKV, whenMigrated } from './kv';
 
 /** IndexedDB 里的密钥库（每个源一份；扩展与网页各存各的） */
-const DB_NAME = 'campus-layer-secure';
+const DB_NAME = 'zzu-info-secure';
+/** 改名前的密钥库：老用户的钥匙在这儿，新库里还没有 */
+const LEGACY_DB_NAME = 'campus' + '-layer-secure';
 const DB_VERSION = 1;
 const STORE = 'keys';
 const KEY_ID = 'device';
@@ -88,9 +90,9 @@ function withTimeout<T>(p: Promise<T>, ms: number, fallback: T): Promise<T> {
   });
 }
 
-function openDb(): Promise<IDBDatabase> {
+function openDb(name: string = DB_NAME): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    const req = indexedDB.open(name, DB_VERSION);
     req.onupgradeneeded = () => {
       const db = req.result;
       if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE);
@@ -139,6 +141,24 @@ async function createKey(): Promise<CryptoKey | null> {
   const db = await openDb();
   const existing = await idbGet(db, KEY_ID);
   if (existing && typeof existing === 'object') return existing as CryptoKey;
+
+  /*
+   * 新库里没有钥匙，但改名前的库里可能还有一把——老用户的密文就是用那把封的。
+   * 不认它的话，这次升级会「重新生成一把钥匙」，然后把所有老密文都解不开。
+   * 找到就直接沿用（钥匙不能导出，没法复制到新库，就继续从老库读）。
+   */
+  try {
+    const legacyDb = await openDb(LEGACY_DB_NAME);
+    const legacy = await idbGet(legacyDb, KEY_ID);
+    if (legacy && typeof legacy === 'object') {
+      void legacyDb.close();
+      return legacy as CryptoKey;
+    }
+    void legacyDb.close();
+  } catch {
+    /* 老库打不开（从未用过 / 被清过）：照常新建 */
+  }
+
   /* extractable: false —— 只有这一句能保证钥匙读不出来 */
   const key = await subtle.generateKey({ name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
   await idbPut(db, KEY_ID, key);
@@ -166,9 +186,12 @@ function getKey(): Promise<CryptoKey | null> {
 const enc = new TextEncoder();
 const dec = new TextDecoder();
 
+/** 改名前的键前缀：老密文的 AAD 里绑的是它 */
+const LEGACY_KEY_PREFIX = 'campus' + '-layer:';
+
 /** 把「哪个键」绑进密文，防止把 A 的密文贴到 B 的位置上还能解开 */
 function aad(slot: string): Uint8Array<ArrayBuffer> {
-  return enc.encode(`campus-layer:${slot}`);
+  return enc.encode(`zzu-info:${slot}`);
 }
 
 /** 加密。没有钥匙、或者钥匙坏了时返回 undefined（调用方退回明文，不能因此存不进去）。 */
@@ -192,20 +215,39 @@ export async function seal(slot: string, value: unknown): Promise<SealedBox | un
   }
 }
 
-/** 解密。钥匙不对 / 数据坏了都返回 undefined（当没存过）。 */
-export async function open(slot: string, box: SealedBox): Promise<unknown> {
+/**
+ * 解密，并告诉调用方这份密文是不是改名前的格式（AAD 绑的是老键名）。
+ * 返回 `{ value }` 才算解开；解不开时 `value` 是 undefined。
+ */
+async function openDetailed(
+  slot: string,
+  box: SealedBox,
+): Promise<{ value: unknown; legacy: boolean }> {
   const key = await getKey();
-  if (!key) return undefined;
-  try {
+  if (!key) return { value: undefined, legacy: false };
+  const attempt = async (additionalData: Uint8Array<ArrayBuffer>): Promise<unknown> => {
     const plain = await globalThis.crypto.subtle.decrypt(
-      { name: 'AES-GCM', iv: fromBase64(box.iv), additionalData: aad(slot) },
+      { name: 'AES-GCM', iv: fromBase64(box.iv), additionalData },
       key,
       fromBase64(box.ct),
     );
     return JSON.parse(dec.decode(plain)) as unknown;
+  };
+  try {
+    return { value: await attempt(aad(slot)), legacy: false };
   } catch {
-    return undefined;
+    /* 新 AAD 解不开：可能是改名前的密文，按老键名再试一次 */
   }
+  try {
+    return { value: await attempt(enc.encode(`${LEGACY_KEY_PREFIX}${slot}`)), legacy: true };
+  } catch {
+    return { value: undefined, legacy: false };
+  }
+}
+
+/** 解密。钥匙不对 / 数据坏了都返回 undefined（当没存过）。 */
+export async function open(slot: string, box: SealedBox): Promise<unknown> {
+  return (await openDetailed(slot, box)).value;
 }
 
 /* ---------- 给业务用的读写 ---------- */
@@ -216,12 +258,22 @@ export async function open(slot: string, box: SealedBox): Promise<unknown> {
  * 否则「读→立刻写」的调用方会被这次迁移写覆盖成旧值）。
  */
 export async function readSecure<T>(key: string): Promise<T | undefined> {
+  /* 老前缀搬完再读，否则升级后的第一次读会当成「没存过」，把登录态白白丢掉 */
+  await whenMigrated();
   const raw = await getKV().get<unknown>(key);
   if (raw === undefined) return undefined;
   if (isSealed(raw)) {
-    const opened = await open(key, raw);
-    if (opened === undefined) console.warn(`[secure] ${key} 解不开（换了设备或清了站点数据？），当没存过。`);
-    return opened as T | undefined;
+    const { value, legacy } = await openDetailed(key, raw);
+    if (value === undefined) console.warn(`[secure] ${key} 解不开（换了设备或清了站点数据？），当没存过。`);
+    else if (legacy) {
+      /* 改名前的密文：已经解开了，顺手按新键名重新封一遍，下次走快路径 */
+      try {
+        await writeSecure(key, value);
+      } catch {
+        /* 重封失败也不影响这次读出来的值 */
+      }
+    }
+    return value as T | undefined;
   }
   /* 明文：顺手迁成密文（存不上也不影响这次返回） */
   try {

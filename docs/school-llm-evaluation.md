@@ -12,7 +12,7 @@
 
 - 卡点是 CAS 风控「安全手机验证 → 发送失败」，后来由用户用**豫见郑大 App 扫二维码**（弹窗右上角那个「俩矩形」图标）通过验证，成功登录 WebUI。
 - 登录后在 设置 → 账号 → API 密钥 里生成 `sk-…`，已实测可用（见 §3.4）。
-- 扩展侧实现：`campus-layer/src/core/llm.ts` + 侧边栏 `⚙` 设置（启用开关 / API Key / 模型名），只在 L0 规则没命中时调用，返回 `{tool,args}`，正文仍由模板渲染。
+- 扩展侧实现：`zzu-info/src/core/llm.ts` + 侧边栏 `⚙` 设置（启用开关 / API Key / 模型名），只在 L0 规则没命中时调用，返回 `{tool,args}`，正文仍由模板渲染。
 - 边界：**仅校园网内**、HTTP 明文、R1 有推理段导致一次判定 **11–18 秒**、默认关闭。
 
 要不要默认开启是使用者的选择：不填 key 时扩展完全离线，与接入前行为一致。
@@ -149,7 +149,7 @@ Open WebUI 只认两种东西：
 
 ### 4.2 扩展侧要改什么
 
-现在 `campus-layer/src/core/` 里没有 LLM 层（v0.2 明确把 LLM 降级为可选）。接的话新增一个小模块即可：
+现在 `zzu-info/src/core/` 里没有 LLM 层（v0.2 明确把 LLM 降级为可选）。接的话新增一个小模块即可：
 
 ```ts
 // src/core/llm.ts（示意）
@@ -174,11 +174,11 @@ export async function chat(apiKey: string, model: string, messages: Msg[]) {
 
 | 位置 | 改法 |
 | --- | --- |
-| `campus-layer/public/manifest.json` | `host_permissions` 加 `http://chat.zzu.edu.cn/*` |
-| `campus-layer/src/core/storage.ts` | 存 `{ apiKey, model }`，与两个 token 并列 |
-| `campus-layer/sidepanel/main.tsx` | 设置区一个 key 输入框 + 一个模型下拉（从 `/api/models` 拉） |
-| `campus-layer/src/core/intent.ts` | L1 分支：规则没命中时交给 `chat()` 做意图分类，失败仍回落到反问 |
-| `campus-layer/src/core/render.ts` | 工具结果仍走模板渲染；**LLM 只负责「听懂问题」，不负责编数据** |
+| `zzu-info/public/manifest.json` | `host_permissions` 加 `http://chat.zzu.edu.cn/*` |
+| `zzu-info/src/core/storage.ts` | 存 `{ apiKey, model }`，与两个 token 并列 |
+| `zzu-info/sidepanel/main.tsx` | 设置区一个 key 输入框 + 一个模型下拉（从 `/api/models` 拉） |
+| `zzu-info/src/core/intent.ts` | L1 分支：规则没命中时交给 `chat()` 做意图分类，失败仍回落到反问 |
+| `zzu-info/src/core/render.ts` | 工具结果仍走模板渲染；**LLM 只负责「听懂问题」，不负责编数据** |
 
 ### 4.3 建议的分层
 
@@ -265,8 +265,8 @@ L2 反问用户（现状）
 
 ### 7.3 扩展里的落地
 
-- `campus-layer/src/core/llm.ts`：`llmChat()`（20s 超时）、`stripThink()`、`parseIntentsJson()`（抠 JSON + 工具白名单 + 参数类型收敛）、`classifyIntent()`。
-- `campus-layer/src/core/agent.ts`：L0 规则 → 未命中且开关打开 → L1 模型判意图 → 同一套 `runTool`。
+- `zzu-info/src/core/llm.ts`：`llmChat()`（20s 超时）、`stripThink()`、`parseIntentsJson()`（抠 JSON + 工具白名单 + 参数类型收敛）、`classifyIntent()`。
+- `zzu-info/src/core/agent.ts`：L0 规则 → 未命中且开关打开 → L1 模型判意图 → 同一套 `runTool`。
 - 侧边栏 `⚙`：启用开关 / API Key / 模型名，存 `chrome.storage.local`。
 - `manifest.json` 加 `http://chat.zzu.edu.cn/*`（第 9 个 host 权限）。
 - 端到端实测：问「后天下午哪个屋子能让我安静看会儿书」（规则层认不出）→ `via: "llm"` → `find_free_room` → 返回 2026-10-23 的真实空教室，11.6–17.5s。
@@ -277,12 +277,12 @@ L2 反问用户（现状）
 
 不再需要手工复制 key：
 
-- `campus-layer/public/content/chat.js` 在 `http://chat.zzu.edu.cn/*` 上读 WebUI 的登录会话（`localStorage.token`），交给扩展。
+- `zzu-info/public/content/chat.js` 在 `http://chat.zzu.edu.cn/*` 上读 WebUI 的登录会话（`localStorage.token`），交给扩展。
 - 扩展 `POST /api/v1/auths/api_key`（`mintApiKey()`）换出 `sk-…` 写进 `chrome.storage.local`；已有 key 不覆盖。
 - 面板打开时自动试一次，设置里也有「从已登录的 DeepSeek 页面自动获取」（`chat:sync`）。
 - 会话只用来换一次 key，之后不再参与请求；key 失效就再打开一次 WebUI。
 
-安全边界（同样写在 `campus-layer/README.md`）：
+安全边界（同样写在 `zzu-info/README.md`）：
 
 | 项 | 事实 |
 |---|---|
@@ -297,7 +297,7 @@ L2 反问用户（现状）
 ## 8. 复现
 
 ```powershell
-cd campus-layer
+cd zzu-info
 node ../tmp/zzu/chat-routes.mjs      # 匿名路由测绘
 node ../tmp/zzu/chat-api.mjs         # 配置/版本/接口形态
 node ../tmp/zzu/chat-token-test.mjs  # 拿真 CAS JWT 去试（证明用不上）

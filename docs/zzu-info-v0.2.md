@@ -1,7 +1,7 @@
-# 校园信息层 · v0.2 修订（实测版）
+# 郑大信息 · v0.2 修订（实测版）
 
-> 取代 `campus-layer-handoff.md`（v0.1）中的架构主路径、权限策略、Schema 与验收标准。
-> 修订依据：`campus-site-probe.md`、`campus-platform-architecture.md`，以及 `campus-layer/` 里已跑通的实现。
+> 取代 `zzu-info-handoff.md`（v0.1）中的架构主路径、权限策略、Schema 与验收标准。
+> 修订依据：`campus-site-probe.md`、`campus-platform-architecture.md`，以及 `zzu-info/` 里已跑通的实现。
 > 日期：2026-10-20
 
 ## 0. 一句话
@@ -99,7 +99,7 @@ v0.1 假设「用 content script 解析教务网页的 DOM」。实测后这一�
 - 不申请 `<all_urls>`，不申请 `optional_host_permissions`（因为不做自定义 `baseUrl`，无需运行时授权）。
 - `minimum_chrome_version` 必须是 **114**（`chrome.sidePanel` 自 114 起），v0.1 写的 111 只覆盖 `world:'MAIN'`。
 
-## 4. Schema（v0.2，与 `campus-layer/src/core/types.ts` 一致）
+## 4. Schema（v0.2，与 `zzu-info/src/core/types.ts` 一致）
 
 | 模型 | 字段 |
 | --- | --- |
@@ -234,7 +234,7 @@ v0.1 假设「用 content script 解析教务网页的 DOM」。实测后这一�
 
 安卓 Chrome 至今不支持扩展（Kiwi 已停更），所以 v0.2.3 起同一套 `src/core/` 又打了一个网页版 `dist/pwa/`：
 
-- 存储抽象 `src/core/kv.ts`：`chrome.storage.local` ↔ `localStorage`（前缀 `campus-layer:`）运行时二选一，`storage.ts` 全部改走它，所以核心逻辑零分叉。
+- 存储抽象 `src/core/kv.ts`：`chrome.storage.local` ↔ `localStorage`（前缀 `zzu-info:`）运行时二选一，`storage.ts` 全部改走它，所以核心逻辑零分叉。
 - 登录态搬运：`exportTokenBundle()` → base64 同步码（`{v:1,jwxt,portal,at}`）→ 手机 `importTokenBundle()`。**编码不是加密**，等同 `X-Id-Token`。
 - 部署约束：service worker 与「添加到主屏幕」要求**安全上下文**，所以必须 HTTPS 或 localhost；局域网 `http://192.168.x.x:8899` 能跑数据查询但装不了。
 - 手机版**也能有 L1**：登录态面板底部就是模型设置（服务商 / key / 模型名），同步码里也会带上。
@@ -311,7 +311,7 @@ v0.1 假设「用 content script 解析教务网页的 DOM」。实测后这一�
 | --- | --- | --- |
 | 17 | 合并 PR #1 后全量回归 | `tsc` 0 错、**303 passed / 12 skipped**（25 文件）；合并前 PR 自己的 CI 是 `action_required`（fork 首贡献没人点 Approve），等于这 3417 行没被人验证过 |
 | 18 | 合并后收尾（`b5a22db`） | ①`scripts/e2e.mjs:314` 的 `search_notice` → `find_notices`（CI 不跑 e2e，不改会静默失效）；②`public/content/jwxt.js` 只认 `iss === 'cas.s.zzu.edu.cn'` 的票（PR 给 jwxt 开了 `all_frames:true`，防止把 iframe 里别人的票当登录态）；③补测试后 **305 passed / 12 skipped** |
-| 19 | 课前提醒 | `remind.test.ts` 5 例（单节 / 连堂合并 / 跨午不合并 / 过点不弹 / 教学周过滤）⇒ **244 passed**；`android` workflow 出 APK（artifact `campus-layer-debug-apk`） |
+| 19 | 课前提醒 | `remind.test.ts` 5 例（单节 / 连堂合并 / 跨午不合并 / 过点不弹 / 教学周过滤）⇒ **244 passed**；`android` workflow 出 APK（artifact `zzu-info-debug-apk`） |
 | 20 | 课前提醒改**每节课各一条**（0.2.70） | 用户反馈「上午满课只在早上弹一次」。去掉 `GAP_MIN` 合并逻辑，`buildReminderBlocks()` 现在一节课一块：标题 `半小时后：课名`、`at = 开课 - 30 分钟`、正文带 `第N-M节 @教室 · 老师`；同一节课跨源（portal/jwxt）按 `日期|开始时间|课名` 去重；过点仍不补弹。`remind.test.ts` 扩到 8 例（提前量 30、正文带节次、连堂各一条、满课 5 节=5 条且时间递增、跨源去重、过点丢弃、教学周过滤、跨天不合并）⇒ **495 passed / 12 skipped**（37 文件）。壳侧 `ReminderScheduler` 同步硬化：requestCode 改 `(at/60000*37+i)%MAX`（撞课不互相覆盖）、`apply()` 先撤上一批闹钟、`SecurityException` 逐条兜底；关开关时前端 `pushReminders([])` 顺带撤闹钟 |
 
 ## 9.3 验收补充（2026-10-27，前端 0.2.52）
@@ -329,7 +329,7 @@ v0.1 假设「用 content script 解析教务网页的 DOM」。实测后这一�
 | 27 | 错误语义分开：`code=610`（该区域当天不可约）与 `code=10001`（被其它设备顶掉）各自人话；桥路径带「今天不行试明天」兜底 | `LibSeatClient.describePayload` + `libtab` 文案 |
 | 28 | 长按预约按钮：**宋体** + 按住后红色进度条自左向右跑满 1.2 秒才提交，松手取消 | `pwa/style.css` 的 `.hold-btn` / `.fill` / `.active` |
 | 29 | 蓝绿（teal）配色：模型气泡由白色 `--panel` 改为同族墨绿不透明面、正文近白、去掉半透明 | `html[data-theme='teal'] .bubble` 一组覆盖 |
-| 30 | 更新链路：`pwa-sw.js` 缓存名 `campus-layer-v8` + `skipWaiting`/`clients.claim`；注册 `{ updateViaCache: 'none' }` + `reg.update()` + 新 SW 就绪后自动 reload；壳在版本号变化时 `web.clearCache(true)` | 线上核对：`assets/pwa-*.js` 内含当前版本号；壳杀进程重开后版本号前进 |
+| 30 | 更新链路：`pwa-sw.js` 缓存名 `zzu-info-v8` + `skipWaiting`/`clients.claim`；注册 `{ updateViaCache: 'none' }` + `reg.update()` + 新 SW 就绪后自动 reload；壳在版本号变化时 `web.clearCache(true)` | 线上核对：`assets/pwa-*.js` 内含当前版本号；壳杀进程重开后版本号前进 |
 | 31 | 续票换成**账密直换 30 天票**（学校 App 的 `/token/` 端点族）：`appMint.ts` 手写 RSA PKCS#1 v1.5 + `fetch`；`deviceId` 过一次短信即成为可信设备，之后零人工；扩展/安卓壳（`AppMint.java`）/CLI（`scripts/app-*.mjs`）三处共用同一协议 | `test/appmint.test.ts` 19 例（含用 Node `privateDecrypt` 解回原文）；实网 74–113 ms、720 h、eams-door 200；`cas:*` 降级为兜底 |
 | 32 | **绑定向导**（0.2.72）：手机 App 里就能把 `deviceId` 登记成可信设备，不必再开电脑跑 CLI。页面 `<AppCreds />` → 填账密 → 点「绑定」→ 壳发短信（`AppBind.java`）→ 填 4~6 位码 → 校验通过顺手换一张 30 天票写进两个槽位；扩展里同一套流程换成本地 `fetch`（`appBind.ts`），壳里走 `CampusNotify.appBindStart/appBindSubmit` ↔ `window.__campusBind` | `test/appbind.test.ts` 16 例（init→send→valid 顺序与 body、status 2/3 翻译、限流与网络错、壳桥 code/done/error/超时、`canBindInShell()` 在无窗口环境为 false）；`creds.ts` 增 `trustedAt`，换 deviceId 自动作废；`tsc` 0 错、533 passed / 12 skipped（39 文件） |
 | 33 | **修闪退**（0.2.73）：0.2.72 在真机点「绑定」就崩。根因是 Java 侧手写 DER 解析把 AlgorithmIdentifier 的第一个孩子（OID）当成了 BIT STRING，读出的长度是 `1472509587`，`new byte[]` 抛 `OutOfMemoryError`（`Error` 不是 `Exception`，漏过所有 `catch (Exception)`）。修法：按 `alg.length` 正确跳过、`readTlv`/`sub` 严格边界、全链路改 `catch (Throwable)`、`pushBind` 包 try/catch；新增 `CrashLog.java` 把栈记进 SharedPreferences 并经 `CampusNotify.lastCrash()/clearCrash()` 显示在设置页 | `test/appmint.test.ts` 加 3 例（DER 截断、长度字段越界、取出的 n 必须是真 2048 位）；`tsc` 0 错、`vitest` 全绿（新增 5 例，含壳里崩溃文本读写 3 例） |

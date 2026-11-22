@@ -1,6 +1,6 @@
 {
-  "name": "校园信息层",
-  "short_name": "校园信息",
+  "name": "郑大信息",
+  "short_name": "郑大信息",
   "description": "用一句话查郑州大学的课表、空教室、通知、学分、一卡通与待办。",
   "start_url": "./index.html",
   "scope": "./",

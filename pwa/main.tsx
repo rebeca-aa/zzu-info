@@ -115,7 +115,7 @@ const CAS_LOGIN_PORTAL =
 /* 常用语改成可编辑列表（原来写死在 QUICK 里）：存 kv，改动立刻落盘。
    初始值先用出厂的，等 refresh() 读到用户自己的列表再替换，避免闪一下空条。 */
 
-const TERM_CACHE_KEY = 'campus-layer:termCache';
+const TERM_CACHE_KEY = 'zzu-info:termCache';
 
 /** 学期信息落一份本地缓存：接口抖一下也不至于把课表页打回「第 1 周」。 */
 const COURSE_TIMEOUT_MS = 3_000;
@@ -2030,7 +2030,7 @@ const looksAuthLost = (msg: string): boolean => AUTH_LOST_RE.test(msg);
                 <span class="v">
                   <a
                     class="link"
-                    href={`https://github.com/rebeca-aa/zzu-campus-layer/issues/new?title=${encodeURIComponent('[反馈] ')}&body=${encodeURIComponent(`版本：${buildVersion}\n\n我的问题/建议：\n`)}`}
+                    href={`https://github.com/rebeca-aa/zzu-info/issues/new?title=${encodeURIComponent('[反馈] ')}&body=${encodeURIComponent(`版本：${buildVersion}\n\n我的问题/建议：\n`)}`}
                     target="_blank"
                     rel="noreferrer"
                   >
@@ -2084,8 +2084,8 @@ const looksAuthLost = (msg: string): boolean => AUTH_LOST_RE.test(msg);
               <div class="about-row">
                 <span class="k">源码</span>
                 <span class="v">
-                  <a class="link" href="https://github.com/rebeca-aa/zzu-campus-layer" target="_blank" rel="noreferrer">
-                    github.com/rebeca-aa/zzu-campus-layer
+                  <a class="link" href="https://github.com/rebeca-aa/zzu-info" target="_blank" rel="noreferrer">
+                    github.com/rebeca-aa/zzu-info
                   </a>
                 </span>
               </div>

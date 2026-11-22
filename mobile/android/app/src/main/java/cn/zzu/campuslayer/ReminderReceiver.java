@@ -26,7 +26,7 @@ public class ReminderReceiver extends BroadcastReceiver {
         Notification.Builder b = (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
                 ? new Notification.Builder(ctx, CHANNEL_ID)
                 : new Notification.Builder(ctx);
-        String safeTitle = title == null ? "校园信息层" : title;
+        String safeTitle = title == null ? "郑大信息" : title;
         String safeBody = body == null ? "" : body;
         b.setSmallIcon(android.R.drawable.ic_dialog_info)
                 .setContentTitle(safeTitle)

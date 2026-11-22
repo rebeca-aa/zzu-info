@@ -531,7 +531,7 @@ export function parseIntentsJson(raw: string): Intent | null {
 
 function buildSystemPrompt(today: string): string {
   return [
-    '你是郑州大学「校园信息层」的助手，服务对象是这名学生本人。',
+    '你是郑州大学「郑大信息」的助手，服务对象是这名学生本人。',
     '',
     '你有两件事要做，二选一：',
     '1) 这句话需要查他本人的数据（课表/空教室/通知/成绩/考试/学分/一卡通/待办/学校服务入口）→',

@@ -14,7 +14,7 @@ import java.io.StringWriter;
  */
 final class CrashLog {
 
-    private static final String PREFS = "campus_layer";
+    private static final String PREFS = "zzu_info";
     private static final String KEY = "last_crash";
     private static final int MAX = 2000;
 

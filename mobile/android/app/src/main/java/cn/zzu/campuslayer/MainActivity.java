@@ -68,6 +68,9 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle state) {
         super.onCreate(state);
 
+        /* 改名前的 prefs 文件叫 campus_layer：先搬过来，再让下面几处照常读 zzu_info */
+        LegacyPrefs.migrate(this);
+
         web = new WebView(this);
         setContentView(web, new ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
@@ -133,7 +136,7 @@ public class MainActivity extends Activity {
         // 旧 chunk / 旧 SW 会一直活着（cookie 与 localStorage 不动，登录态保留）。
         try {
             String vn = getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
-            String last = getSharedPreferences("campus_layer", MODE_PRIVATE).getString("web_cache_ver", "");
+            String last = getSharedPreferences("zzu_info", MODE_PRIVATE).getString("web_cache_ver", "");
             if (!vn.equals(last)) {
                 web.clearCache(true);
                 // 只清 HTTP 缓存不够：旧 Service Worker 仍会拿缓存里的 index.html，
@@ -141,7 +144,7 @@ public class MainActivity extends Activity {
                 web.evaluateJavascript(
                     "(async()=>{try{const rs=await navigator.serviceWorker.getRegistrations();for(const r of rs)await r.unregister();const ks=await caches.keys();for(const k of ks)await caches.delete(k);}catch(e){}})()",
                     null);
-                getSharedPreferences("campus_layer", MODE_PRIVATE).edit().putString("web_cache_ver", vn).apply();
+                getSharedPreferences("zzu_info", MODE_PRIVATE).edit().putString("web_cache_ver", vn).apply();
             }
         } catch (Exception ignored) {
         }
@@ -389,7 +392,7 @@ public class MainActivity extends Activity {
             return;
         }
         renewAsked = true;
-        web.evaluateJavascript("(function(){try{var raw=localStorage.getItem('campus-layer:tokens');if(!raw)return '{\"need\":false}';var o=JSON.parse(raw);var j=(o.jwxt&&o.jwxt.token)||'';if(!j)return '{\"need\":false}';var b=j.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');var p=JSON.parse(decodeURIComponent(escape(atob(b))));var left=Math.round((p.exp*1000-Date.now())/60000);return JSON.stringify({need:left<120,leftMin:left});}catch(e){return '{\"need\":false}'}})()", value -> {
+        web.evaluateJavascript("(function(){try{var raw=localStorage.getItem('zzu-info:tokens')||localStorage.getItem('campus'+'-layer:tokens');if(!raw)return '{\"need\":false}';var o=JSON.parse(raw);var j=(o.jwxt&&o.jwxt.token)||'';if(!j)return '{\"need\":false}';var b=j.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');var p=JSON.parse(decodeURIComponent(escape(atob(b))));var left=Math.round((p.exp*1000-Date.now())/60000);return JSON.stringify({need:left<120,leftMin:left});}catch(e){return '{\"need\":false}'}})()", value -> {
             String s = value == null ? "" : value;
             if (s.contains("\"need\":true")) {
                 renewQuickly();
@@ -415,7 +418,8 @@ public class MainActivity extends Activity {
             return;
         }
         // 先把 PWA 存在 localStorage 里的学号密码读出来（没绑过就是空串，直接跳过第一级）
-        web.evaluateJavascript("(function(){try{return localStorage.getItem('campus-layer:appCreds')||''}catch(e){return ''}})()",
+        // 老键名是改名前的 campus-layer:appCreds，还没被网页侧搬迁时在这里兜一下
+        web.evaluateJavascript("(function(){try{return localStorage.getItem('zzu-info:appCreds')||localStorage.getItem('campus'+'-layer:appCreds')||''}catch(e){return ''}})()",
                 value -> {
                     final String credsJson = jsString(value);
                     /* 必须按 /cas/ 这个路径取：TGC / SESSION / CAS_TRACE_ID 的 Path 都是 /cas/，

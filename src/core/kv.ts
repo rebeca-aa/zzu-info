@@ -12,16 +12,66 @@ export interface KV {
   remove(key: string): Promise<void>;
 }
 
-const PREFIX = 'campus-layer:';
+const PREFIX = 'zzu-info:';
+/** 改名前（campus-layer）存下的键前缀：老用户的登录态、模型 key、密码都在这儿 */
+const LEGACY_PREFIX = 'campus' + '-layer:';
 
 function hasChromeStorage(): boolean {
   return typeof chrome !== 'undefined' && Boolean(chrome.storage?.local);
 }
 
+/**
+ * 一次性把老前缀的键搬到新前缀。
+ *
+ * 为什么要搬：改名把 `campus-layer:` 换成了 `zzu-info:`，但用户设备上的键还是老名字。
+ * 不搬的话，升级后所有人都会像第一次装一样——登录态、模型 key、密码全没了。
+ * 只搬一次（搬完删掉老键），之后启动就只是扫一遍空集合。
+ *
+ * 注意：密文里的 AAD 也绑了键名（见 secure.ts 的 aad），所以老密文照旧按老 key 解，
+ * 解开后 writeSecure 会用新的 key 重新封一遍——这里只要保证键能读到。
+ */
+async function migrateLegacyKeys(): Promise<void> {
+  if (hasChromeStorage()) {
+    const all = await chrome.storage.local.get(null);
+    const old = Object.keys(all).filter((k) => k.startsWith(LEGACY_PREFIX));
+    if (!old.length) return;
+    const moved: Record<string, unknown> = {};
+    for (const k of old) moved[PREFIX + k.slice(LEGACY_PREFIX.length)] = all[k];
+    await chrome.storage.local.set(moved);
+    await chrome.storage.local.remove(old);
+    return;
+  }
+  try {
+    const old: string[] = [];
+    for (let i = 0; i < localStorage.length; i += 1) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith(LEGACY_PREFIX)) old.push(k);
+    }
+    for (const k of old) {
+      const v = localStorage.getItem(k);
+      if (v === null) continue;
+      localStorage.setItem(PREFIX + k.slice(LEGACY_PREFIX.length), v);
+      localStorage.removeItem(k);
+    }
+  } catch {
+    /* 隐私模式 / 存储被禁：读不到就当作没搬过，不影响正常运行 */
+  }
+}
+
+const migration = migrateLegacyKeys().catch(() => undefined);
+
 const chromeKV: KV = {
   async get<T>(key: string) {
     const got = await chrome.storage.local.get(key);
-    return got[key] as T | undefined;
+    if (got[key] !== undefined) return got[key] as T;
+    /* 新键没有就看老键：批量搬迁万一还没跑（模块加载顺序、并发的另一个上下文），
+       也不能把一个老用户当成「没存过」。读到就顺手搬过去。 */
+    const legacyKey = LEGACY_PREFIX + key;
+    const old = await chrome.storage.local.get(legacyKey);
+    if (old[legacyKey] === undefined) return undefined;
+    await chrome.storage.local.set({ [key]: old[legacyKey] });
+    await chrome.storage.local.remove(legacyKey);
+    return old[legacyKey] as T;
   },
   async set(key: string, value: unknown) {
     await chrome.storage.local.set({ [key]: value });
@@ -35,7 +85,14 @@ const localKV: KV = {
   async get<T>(key: string) {
     try {
       const raw = localStorage.getItem(PREFIX + key);
-      return raw ? (JSON.parse(raw) as T) : undefined;
+      if (raw) return JSON.parse(raw) as T;
+      /* 同上：新键没有就回看老键，读到顺迁 */
+      const legacyKey = LEGACY_PREFIX + key;
+      const old = localStorage.getItem(legacyKey);
+      if (old === null) return undefined;
+      localStorage.setItem(PREFIX + key, old);
+      localStorage.removeItem(legacyKey);
+      return JSON.parse(old) as T;
     } catch {
       return undefined;
     }
@@ -51,6 +108,11 @@ const localKV: KV = {
 /** 当前环境可用的存储。每次调用都重新判断，便于测试里换环境。 */
 export function getKV(): KV {
   return hasChromeStorage() ? chromeKV : localKV;
+}
+
+/** 等启动时的老键搬迁跑完（secure.ts 自己拼键名绕过了 KV，得先 await 这个）。 */
+export function whenMigrated(): Promise<void> {
+  return migration;
 }
 
 /** 手机端「整套登录态」的导出/导入格式（一次性粘贴）。 */

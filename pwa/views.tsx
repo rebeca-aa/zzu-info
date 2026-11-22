@@ -204,7 +204,7 @@ interface HomeCache {
   at: number;
 }
 
-const homeCacheKey = (today: string) => `campus-layer:homeCache:${today}`;
+const homeCacheKey = (today: string) => `zzu-info:homeCache:${today}`;
 
 function readHomeCache(today: string): HomeCache | null {
   try {
@@ -275,7 +275,7 @@ function writeHomeCache(today: string, data: HomeCache): void {
     /* 顺手清掉前一天的，别越攒越多 */
     for (let i = localStorage.length - 1; i >= 0; i--) {
       const key = localStorage.key(i);
-      if (key && key.startsWith('campus-layer:homeCache:') && key !== homeCacheKey(today)) localStorage.removeItem(key);
+      if (key && key.startsWith('zzu-info:homeCache:') && key !== homeCacheKey(today)) localStorage.removeItem(key);
     }
   } catch {
     /* 存不下就算了，不影响用 */
@@ -1675,7 +1675,7 @@ export function WeatherView({ today, onBack }: { today: string; onBack: () => vo
   /* 有雨提示每天只发一次：壳里走系统通知，浏览器里走 Notification（授权过才发） */
   useEffect(() => {
     if (!wx || !alert) return;
-    const key = 'campus-layer:weatherTip';
+    const key = 'zzu-info:weatherTip';
     try {
       if (localStorage.getItem(key) === today) return;
       localStorage.setItem(key, today);

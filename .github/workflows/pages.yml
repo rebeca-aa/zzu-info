@@ -1,7 +1,7 @@
 name: pages
 
 # 把 dist/ 发到 GitHub Pages，得到一个可以「加到主屏幕」的 HTTPS 地址
-# 地址形如：https://<你的用户名>.github.io/zzu-campus-layer/
+# 地址形如：https://<你的用户名>.github.io/zzu-info/
 
 on:
   push:
@@ -52,13 +52,13 @@ jobs:
       # 没装 Node 的人可以直接下载解压，得到的就是可以「加载解压缩的扩展」的 dist 内容
       - uses: actions/upload-artifact@v4
         with:
-          name: campus-layer-dist
+          name: zzu-info-dist
           path: dist
           retention-days: 30
 
       # artifact 下载要登录 GitHub；再往滚动 Release 挂一份，任何人都能直接下
       - name: 打包 dist
-        run: cd dist && zip -qr ../campus-layer-dist.zip . && cd ..
+        run: cd dist && zip -qr ../zzu-info-dist.zip . && cd ..
 
       - name: 发布到 Release（滚动 tag：dist-latest）
         env:
@@ -71,7 +71,7 @@ jobs:
 
           每次推 main 会被覆盖更新。" \
               --target main
-          gh release upload dist-latest campus-layer-dist.zip --clobber
+          gh release upload dist-latest zzu-info-dist.zip --clobber
 
   deploy:
     needs: build

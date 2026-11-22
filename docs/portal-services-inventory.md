@@ -4,7 +4,7 @@
 > 记下它到底提供什么信息、接口能不能直接用、值不值得接进对话层。
 >
 > 数据来自 2026-10-21 的实测（账号 202600000001），不是猜的。
-> 相关文档：`docs/campus-site-probe.md`（接口测绘）、`docs/campus-platform-architecture.md`（结构）、`docs/campus-layer-v0.2.md`（规格）。
+> 相关文档：`docs/campus-site-probe.md`（接口测绘）、`docs/campus-platform-architecture.md`（结构）、`docs/zzu-info-v0.2.md`（规格）。
 
 ## 0. 怎么盘点的
 
@@ -80,7 +80,7 @@
 - `get_plan_progress` 走 `GET /eams-micro-server/api/v1/plan/search/completion/info?code=01`（30,920B，实测 679ms），
   递归统计 `result === '未修'` 的叶子课程。缺 `code` 会 500 `Required String parameter 'code' is not present`，
   别省略这个参数。
-- `open_service` 是纯本地表（`campus-layer/src/core/catalog.ts`），不发请求、1ms 返回；
+- `open_service` 是纯本地表（`zzu-info/src/core/catalog.ts`），不发请求、1ms 返回；
   匹配优先级：名字完全命中 100 > 别名 90 > 名字包含 80 > 名字被包含 70 > 别名包含 60 > 描述 30。
   - `get_card` / `get_todos` 都用**教务票**访问门户与事务中心（见 §3.1 的跨域结论），
   余额是字符串（`toYuan()` 统一成数字），流水为空时明说「没有最近流水」；待办计数全 0 时明说「没有需要你处理的待办」。
@@ -117,7 +117,7 @@
 ## 6. 复现
 
 ```powershell
-cd campus-layer
+cd zzu-info
 # 服务目录
 node ../tmp/zzu/svclist.mjs              # 或直接看 tmp/zzu/services-all.json
 # 公开面探测

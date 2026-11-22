@@ -30,7 +30,7 @@ import java.security.MessageDigest;
  * WebView 的补丁都必须装新 APK。这里把「发现新版 → 下载 → 让系统装」全做完，用户只需要点两下。
  *
  * <p>版本信息是 shell.json：
- * <pre>{"versionCode":112,"versionName":"0.2.127","apkUrl":"https://github.com/.../campus-layer-debug.apk"}</pre>
+ * <pre>{"versionCode":112,"versionName":"0.2.127","apkUrl":"https://github.com/.../zzu-info-debug.apk"}</pre>
  * 它和 APK 一起挂在 Release 的滚动 tag apk-latest 上（先传 APK、后传 shell.json，
  * 所以读到清单时包一定已经就位，不会出现「提示有新版、下下来还是旧签名」）。
  * 刻意只用这一个地址：网页那边（Pages）不参与壳的版本号，免得两边对不上。
@@ -43,9 +43,9 @@ final class AppUpdater {
 
     /** 版本清单和 APK 放在同一个 Release 里：读到的版本号一定对应得到能装的包。 */
     static final String META_URL =
-            "https://github.com/rebeca-aa/zzu-campus-layer/releases/download/apk-latest/shell.json";
+            "https://github.com/rebeca-aa/zzu-info/releases/download/apk-latest/shell.json";
 
-    private static final String PREFS = "campus_layer";
+    private static final String PREFS = "zzu_info";
     private static final String KEY_LAST = "shell_check_ms";
     /** 自动检查的间隔：同一个版本反复弹窗很烦，6 小时一次足够 */
     private static final long AUTO_EVERY_MS = 6L * 60 * 60 * 1000;
@@ -161,7 +161,7 @@ final class AppUpdater {
                     File dir = ApkProvider.dirFor(a);
                     //noinspection ResultOfMethodCallIgnored
                     dir.mkdirs();
-                    final File out = new File(dir, "campus-layer-" + name + ".apk");
+                    final File out = new File(dir, "zzu-info-" + name + ".apk");
                     fetchTo(url, out, a);
                     final String problem = checkApk(a, out);
                     a.runOnUiThread(new Runnable() {
@@ -341,7 +341,7 @@ final class AppUpdater {
         conn.setConnectTimeout(TIMEOUT_MS);
         conn.setReadTimeout(TIMEOUT_MS);
         conn.setInstanceFollowRedirects(true);
-        conn.setRequestProperty("User-Agent", "campus-layer-shell/" + versionName(c));
+        conn.setRequestProperty("User-Agent", "zzu-info-shell/" + versionName(c));
         conn.setRequestProperty("Cache-Control", "no-cache");
         conn.connect();
         int code = conn.getResponseCode();

@@ -13,5 +13,5 @@ dependencyResolutionManagement {
   }
 }
 
-rootProject.name = "campus-layer"
+rootProject.name = "zzu-info"
 include(":app")

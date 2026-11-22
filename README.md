@@ -1,14 +1,14 @@
-# 校园信息层 · campus-layer
+# 郑大信息 · zzu-info
 
 > 把郑州大学那堆"点进去、再点进去、再找一下"的学生服务，变成**一句话就能问**的东西。
 >
 > 形态有三个：**浏览器扩展**（侧边栏）、**手机 PWA**（加到主屏幕）、**安卓壳**（WebView + 课前提醒通知）。
 > 没有服务器，没有账号体系，数据全在你自己设备上。
 
-[![ci](https://github.com/rebeca-aa/zzu-campus-layer/actions/workflows/ci.yml/badge.svg)](https://github.com/rebeca-aa/zzu-campus-layer/actions/workflows/ci.yml)
-[![pages](https://github.com/rebeca-aa/zzu-campus-layer/actions/workflows/pages.yml/badge.svg)](https://github.com/rebeca-aa/zzu-campus-layer/actions/workflows/pages.yml)
+[![ci](https://github.com/rebeca-aa/zzu-info/actions/workflows/ci.yml/badge.svg)](https://github.com/rebeca-aa/zzu-info/actions/workflows/ci.yml)
+[![pages](https://github.com/rebeca-aa/zzu-info/actions/workflows/pages.yml/badge.svg)](https://github.com/rebeca-aa/zzu-info/actions/workflows/pages.yml)
 
-**在线演示**：<https://rebeca-aa.github.io/zzu-campus-layer/>
+**在线演示**：<https://rebeca-aa.github.io/zzu-info/>
 （只是壳，不含任何人的数据；第一次进去要粘一次你自己的登录态，见 [登录态从哪来](#登录态从哪来)）
 
 ---
@@ -33,13 +33,13 @@
 
 | 形态 | 适合 | 能力 | 怎么装 |
 | --- | --- | --- | --- |
-| **浏览器扩展**（MV3） | 电脑上用（可选） | 全部 14 个工具 + 通知卡片 + 每日盯梢 | 见 [60 秒上手](#60-秒上手扩展)（没装 Node 就下 [dist.zip](https://github.com/rebeca-aa/zzu-campus-layer/releases/download/dist-latest/campus-layer-dist.zip)） |
-| **PWA** | 手机（安卓/iOS 都能加主屏幕） | 除"每日盯梢"外的全部；可带模型 key | 打开 [在线演示](https://rebeca-aa.github.io/zzu-campus-layer/) → 加主屏幕 |
-| **安卓壳**（可选） | 想要原生图标 + **课前 30 分钟通知** | PWA 全部 + AlarmManager 提醒（壳内嵌登录，不用再复制地址） | [**直接下载 APK**](https://github.com/rebeca-aa/zzu-campus-layer/releases/download/apk-latest/campus-layer-debug.apk)（不用登录 GitHub） |
+| **浏览器扩展**（MV3） | 电脑上用（可选） | 全部 14 个工具 + 通知卡片 + 每日盯梢 | 见 [60 秒上手](#60-秒上手扩展)（没装 Node 就下 [dist.zip](https://github.com/rebeca-aa/zzu-info/releases/download/dist-latest/zzu-info-dist.zip)） |
+| **PWA** | 手机（安卓/iOS 都能加主屏幕） | 除"每日盯梢"外的全部；可带模型 key | 打开 [在线演示](https://rebeca-aa.github.io/zzu-info/) → 加主屏幕 |
+| **安卓壳**（可选） | 想要原生图标 + **课前 30 分钟通知** | PWA 全部 + AlarmManager 提醒（壳内嵌登录，不用再复制地址） | [**直接下载 APK**](https://github.com/rebeca-aa/zzu-info/releases/download/apk-latest/zzu-info-debug.apk)（不用登录 GitHub） |
 
 > 手机 Chrome 至今不支持扩展（Kiwi 已停更），所以手机走 PWA；安卓壳只是把同一个 PWA 包进 WebView，顺便拿到系统通知能力。
 >
-> 想把它部署到自己的域名/子路径？看 [docs/deploy-pwa.md](docs/deploy-pwa.md)。**仓库里没有 `dist/`**（构建产物不入库），要么本地 `npm run build`，要么直接下 [campus-layer-dist.zip](https://github.com/rebeca-aa/zzu-campus-layer/releases/download/dist-latest/campus-layer-dist.zip) 解压。
+> 想把它部署到自己的域名/子路径？看 [docs/deploy-pwa.md](docs/deploy-pwa.md)。**仓库里没有 `dist/`**（构建产物不入库），要么本地 `npm run build`，要么直接下 [zzu-info-dist.zip](https://github.com/rebeca-aa/zzu-info/releases/download/dist-latest/zzu-info-dist.zip) 解压。
 
 ---
 
@@ -53,8 +53,8 @@ npm run build                  # 产物在 dist/（这个目录不进仓库，�
 > **仓库里没有 `dist/`**——构建产物不入库（避免每次提交一堆带 hash 的 chunk）。
 > 两种拿法：
 > - 装了 Node：上面两条命令，自己构建出来；
-> - **没装 Node**：直接下 [campus-layer-dist.zip](https://github.com/rebeca-aa/zzu-campus-layer/releases/download/dist-latest/campus-layer-dist.zip)（约 110 KB，**不需要登录 GitHub**），解压就是 `dist` 的内容。
->   （另一个来源：任意一次 [pages 运行](https://github.com/rebeca-aa/zzu-campus-layer/actions/workflows/pages.yml)页面底部的 Artifacts，但那个要登录。）
+> - **没装 Node**：直接下 [zzu-info-dist.zip](https://github.com/rebeca-aa/zzu-info/releases/download/dist-latest/zzu-info-dist.zip)（约 110 KB，**不需要登录 GitHub**），解压就是 `dist` 的内容。
+>   （另一个来源：任意一次 [pages 运行](https://github.com/rebeca-aa/zzu-info/actions/workflows/pages.yml)页面底部的 Artifacts，但那个要登录。）
 
 1. `edge://extensions`（或 `chrome://extensions`）→ 打开「开发人员模式」→「加载解压缩的扩展」→ 选构建出来的 `dist` 目录。
 2. 浏览器里登录一次 `https://jwxt.zzu.edu.cn/uniapp/index.html`（教务）和/或 `https://uniapp.s.zzu.edu.cn`（门户）。
@@ -140,7 +140,7 @@ npm run build                  # 产物在 dist/（这个目录不进仓库，�
 >
 > 规则没接住的口语，还有一层**离线说法库**兜底（`src/core/phrases.ts` + `src/core/utterance.ts`）：340 多条「人话 → 工具」的对照，用字符覆盖率 + 2/3 字片段相似度打分，`≥0.62` 直接执行、`0.42–0.62` 只当候选。它只在**没配模型**且正则没命中时才跑，所以配了 key 的人行为一点没变；参数不合法（比如订座缺座位号）宁可当没听懂也不乱跑。常见 64 句口语现在 63 句能接对。
 
-**主页那几条「自定义栏」也能自己改**：默认带「图书馆 / 今天图书馆一楼空余座位图」和「空教室 / 南核空教室」两条，点一下就把这句话直接发给 AI；右上角小小的「+」打开设置窗，能加、改、删（上限 6 条），也能开关「校园卡」那栏——它不走会话，直接调接口把余额抓回来。改动存在本机（PWA `localStorage` 的 `campus-layer:homeBars`），刷新后还在；AI 页不再单独摆常用语药丸，入口统一收到主页。
+**主页那几条「自定义栏」也能自己改**：默认带「图书馆 / 今天图书馆一楼空余座位图」和「空教室 / 南核空教室」两条，点一下就把这句话直接发给 AI；右上角小小的「+」打开设置窗，能加、改、删（上限 6 条），也能开关「校园卡」那栏——它不走会话，直接调接口把余额抓回来。改动存在本机（PWA `localStorage` 的 `zzu-info:homeBars`），刷新后还在；AI 页不再单独摆常用语药丸，入口统一收到主页。
 
 **聊天只留最近 10 条，但换页面回来还在**：聊完的记录会落到本地（`src/core/transcript.ts`），刷新、点进图书馆预约再返回、关掉侧栏重开，最近 10 条都还在（我发的和他回的一起算 10 条），不用重打一遍；回来直接停在最底部那条，没有「滑下去」的那段动画。只留 10 条是界面上的事，跟模型能看多少无关——真正发给模型的历史一直由 `src/core/agent.ts` 的 `MAX_HISTORY` 管，聊再久也不会把上下文撑满。座位图、`.ics` 这类大字段不进存档，避免把本地存储撑爆。
 
@@ -200,7 +200,7 @@ npm run build                  # 产物在 dist/（这个目录不进仓库，�
 ## 装安卓壳（可选）
 
 1. 手机点这个链接下载（**不需要登录 GitHub**）：
-   <https://github.com/rebeca-aa/zzu-campus-layer/releases/download/apk-latest/campus-layer-debug.apk>
+   <https://github.com/rebeca-aa/zzu-info/releases/download/apk-latest/zzu-info-debug.apk>
 2. 打开安装包 → 系统会拦一下「未知来源应用」，允许你的浏览器/文件管理器装即可。
 3. 首次打开点右上角菜单 **「登录（推荐）」**——壳里会用学校账号登录，登录完自动回到主界面并把登录态灌进去，**不用再复制地址、不用同步码**。
 4. 装完能在系统里收到课前提醒：**每节课开课前 30 分钟各弹一条**（连堂课也各自提醒，不合并）。
@@ -418,7 +418,7 @@ mobile/android/      安卓壳（Gradle，零第三方依赖）
 - 面板顶部显示**前端版本号**（当前 `0.2.52`），用来判断手机上有没有拿到新前端。
 
 **版本与更新链路（踩过的坑）**
-- `public/pwa/pwa-sw.js` 缓存名已到 `campus-layer-v8`，并加了 `skipWaiting` + `clients.claim`；注册用 `{ updateViaCache: 'none' }` + 每次 `reg.update()`，新 SW 装好后自动 `reload` 一次。
+- `public/pwa/pwa-sw.js` 缓存名已到 `zzu-info-v8`，并加了 `skipWaiting` + `clients.claim`；注册用 `{ updateViaCache: 'none' }` + 每次 `reg.update()`，新 SW 装好后自动 `reload` 一次。
 - 安卓壳在**版本号变化**时执行一次 `web.clearCache(true)`（不动 cookie/localStorage），所以「装了新 APK 但界面还是旧的」这个坑关掉了；反过来，**只推前端不发 APK 时**，必须杀进程重开才会用新缓存名。
 
 **仍然做不到 / 已知边界**
@@ -434,7 +434,7 @@ mobile/android/      安卓壳（Gradle，零第三方依赖）
 | [docs/campus-site-probe.md](docs/campus-site-probe.md) | 接口实测清单与探针方法（逆向用） |
 | [docs/portal-services-inventory.md](docs/portal-services-inventory.md) | 22 项门户服务的"能接 / 不能接"盘点 |
 | [docs/notice-hub.md](docs/notice-hub.md) | 通知卡片规则：六类分类、时间地点抽取、今日口径 |
-| [docs/campus-layer-v0.2.md](docs/campus-layer-v0.2.md) | 设计说明与验收记录（含每次实测数字） |
+| [docs/zzu-info-v0.2.md](docs/zzu-info-v0.2.md) | 设计说明与验收记录（含每次实测数字） |
 | [docs/deploy-pwa.md](docs/deploy-pwa.md) | 静态托管三种放法与自检 |
 
 ---

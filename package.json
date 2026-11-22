@@ -1,9 +1,9 @@
 {
-  "name": "zzu-campus-layer",
+  "name": "zzu-info",
   "private": true,
   "version": "0.2.146",
   "type": "module",
-  "description": "郑州大学「校园信息层」——基于实测 API 的 MV3 侧边栏助手",
+  "description": "郑州大学「郑大信息」——基于实测 API 的 MV3 侧边栏助手",
   "scripts": {
     "build": "vite build",
     "watch": "vite build --watch",

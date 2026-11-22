@@ -1,9 +1,9 @@
-/* 校园信息层 PWA service worker
+/* 郑大信息 PWA service worker
    设计原则：**不缓存**业务资源，只做「离线兜底 + 极简壳缓存」。
    原因：壳里长期不关，凡是缓存优先都会出现「部署了但拿不到 / 拿到半套」，
    最终表现就是白屏；宁可离线时报错，也不要拿着旧 chunk 装新页面。 */
 
-const SHELL = 'campus-layer-shell-v9';
+const SHELL = 'zzu-info-shell-v9';
 const SHELL_FILES = ['./index.html'];
 
 self.addEventListener('install', (e) => {
