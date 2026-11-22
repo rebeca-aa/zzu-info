@@ -794,9 +794,27 @@ html[data-theme='teal'] .lesson {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   align-items: center;
-  background: color-mix(in srgb, var(--bg) 92%, #000);
-  border-top: 1px solid var(--line);
+  /* 底栏用主题色做一层很轻的渐变，鸿蒙下栏的白边不再突兀 */
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--bg) 88%, var(--accent) 12%) 0%,
+    color-mix(in srgb, var(--bg) 96%, var(--accent) 4%) 46%,
+    var(--bg) 100%
+  );
+  border-top: 1px solid color-mix(in srgb, var(--accent) 22%, var(--line));
   backdrop-filter: blur(10px);
+}
+
+/* 底栏下方再垫一层同色渐变，覆盖安全区与系统手势条之间可能露出的白边 */
+.tabbar::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  height: calc(env(safe-area-inset-bottom) + 24px);
+  background: linear-gradient(to bottom, var(--bg), color-mix(in srgb, var(--bg) 97%, #000));
+  pointer-events: none;
 }
 .tabbar button {
   display: flex;
@@ -2897,4 +2915,19 @@ header .termline .back svg {
   font-weight: 400;
   letter-spacing: 0.04em;
   opacity: 0.7;
+}
+
+/* 米白下用暖茶色渐变，别让强调色的蓝把底栏染灰 */
+html[data-theme='cream'] .tabbar {
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--bg) 84%, var(--line)),
+    color-mix(in srgb, var(--bg) 95%, var(--line)),
+    var(--bg)
+  );
+  border-top-color: color-mix(in srgb, var(--line) 70%, transparent);
+}
+
+html[data-theme='cream'] .tabbar::after {
+  background: linear-gradient(to bottom, var(--bg), color-mix(in srgb, var(--bg) 96%, var(--line)));
 }
