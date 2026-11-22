@@ -75,7 +75,7 @@ function matchPlatform(text: string): string | undefined {
 }
 
 /** 行尾的括号组：能解析成日期的当日期，其余当备注 */
-function takeBrackets(line: string): { rest: string; due?: number; note?: string } {
+function takeBrackets(line: string, now: number): { rest: string; due?: number; note?: string } {
   let rest = line.trim();
   let due: number | undefined;
   let note: string | undefined;
@@ -83,7 +83,8 @@ function takeBrackets(line: string): { rest: string; due?: number; note?: string
     const m = /[\(【\[]([^()【】\[\]]{1,30})[\)】\]]\s*$/.exec(rest);
     if (!m) break;
     const inner = m[1]!.trim();
-    const ts = parseDueAt(inner);
+    /* 必须带上 now：不带就用真实系统时间，跨年判断会随「今天」漂移 */
+    const ts = parseDueAt(inner, now);
     if (ts && !due) due = ts;
     else if (!note && inner.length <= 20) note = inner;
     rest = rest.slice(0, m.index).trim();
@@ -173,9 +174,9 @@ function parseList(lines: string[], now: number): RuleParseResult {
     if (!line) continue;
     // 标题行（「作业通知:」「各科近期作业汇总:」）与提醒行都跳过
     if (/^[^:]{2,16}:\s*$/.test(line)) { dropped += 1; continue; }
-    if (NOISE.test(line) && parseDueAt(line) === null) { dropped += 1; continue; }
+    if (NOISE.test(line) && parseDueAt(line, now) === null) { dropped += 1; continue; }
 
-    const { rest, due: bracketDue, note } = takeBrackets(line);
+    const { rest, due: bracketDue, note } = takeBrackets(line, now);
     const { course: prefixCourse, rest: body } = splitPrefix(rest);
     const due = bracketDue ?? parseDueAt(body, now) ?? 0;
     const title = cleanTitle(body);
