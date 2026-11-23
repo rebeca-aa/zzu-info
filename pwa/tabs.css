@@ -794,18 +794,13 @@ html[data-theme='teal'] .lesson {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   align-items: center;
-  /* 底栏用主题色做一层很轻的渐变，鸿蒙下栏的白边不再突兀 */
-  background: linear-gradient(
-    to bottom,
-    color-mix(in srgb, var(--bg) 88%, var(--accent) 12%) 0%,
-    color-mix(in srgb, var(--bg) 96%, var(--accent) 4%) 46%,
-    var(--bg) 100%
-  );
+  /* 底栏就是主题底色，不再做渐变（渐变会在浅色主题下露出灰边） */
+  background: var(--bg);
   border-top: 1px solid color-mix(in srgb, var(--accent) 22%, var(--line));
   backdrop-filter: blur(10px);
 }
 
-/* 底栏下方再垫一层同色渐变，覆盖安全区与系统手势条之间可能露出的白边 */
+/* 底栏下方再垫一层同色底，覆盖安全区与系统手势条之间可能露出的白边 */
 .tabbar::after {
   content: '';
   position: absolute;
@@ -813,7 +808,7 @@ html[data-theme='teal'] .lesson {
   right: 0;
   top: 100%;
   height: calc(env(safe-area-inset-bottom) + 24px);
-  background: linear-gradient(to bottom, var(--bg), color-mix(in srgb, var(--bg) 97%, #000));
+  background: var(--bg);
   pointer-events: none;
 }
 .tabbar button {
@@ -2917,33 +2912,22 @@ header .termline .back svg {
   opacity: 0.7;
 }
 
-/* 米白下用暖茶色渐变，别让强调色的蓝把底栏染灰 */
-/* 浅色主题（米白/亮粉/自定义浅色）：底栏向白色渐变过去，系统灰边不再突兀 */
+/* 浅色主题（米白/亮粉/自定义浅色）：底栏同样用主题底色，只把分隔线调淡 */
 html[data-theme='cream'] .tabbar {
-  background: linear-gradient(
-    to bottom,
-    color-mix(in srgb, var(--bg) 84%, var(--line)) 0%,
-    color-mix(in srgb, var(--bg) 40%, #fff) 55%,
-    #fff 100%
-  );
+  background: var(--bg);
   border-top-color: color-mix(in srgb, var(--line) 60%, transparent);
 }
 
 html[data-theme='pink'] .tabbar,
 html[data-scheme='light'] .tabbar {
-  background: linear-gradient(
-    to bottom,
-    color-mix(in srgb, var(--bg) 84%, var(--accent) 16%) 0%,
-    color-mix(in srgb, var(--bg) 40%, #fff) 55%,
-    #fff 100%
-  );
+  background: var(--bg);
   border-top-color: color-mix(in srgb, var(--line) 60%, transparent);
 }
 
 html[data-theme='cream'] .tabbar::after,
 html[data-theme='pink'] .tabbar::after,
 html[data-scheme='light'] .tabbar::after {
-  background: linear-gradient(to bottom, color-mix(in srgb, var(--bg) 40%, #fff), #fff);
+  background: var(--bg);
 }
 
 /* 主页快捷入口：长按 1 秒进入拖动排序 */
