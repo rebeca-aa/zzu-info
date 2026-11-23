@@ -794,9 +794,8 @@ html[data-theme='teal'] .lesson {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   align-items: center;
-  /* 底栏就是主题底色，不再做渐变（渐变会在浅色主题下露出灰边） */
+  /* 底栏就是主题底色，不带渐变也不带分隔线，和页面连成一片 */
   background: var(--bg);
-  border-top: 1px solid color-mix(in srgb, var(--accent) 22%, var(--line));
   backdrop-filter: blur(10px);
 }
 
@@ -2912,16 +2911,14 @@ header .termline .back svg {
   opacity: 0.7;
 }
 
-/* 浅色主题（米白/亮粉/自定义浅色）：底栏同样用主题底色，只把分隔线调淡 */
+/* 浅色主题（米白/亮粉/自定义浅色）：底栏同样用主题底色 */
 html[data-theme='cream'] .tabbar {
   background: var(--bg);
-  border-top-color: color-mix(in srgb, var(--line) 60%, transparent);
 }
 
 html[data-theme='pink'] .tabbar,
 html[data-scheme='light'] .tabbar {
   background: var(--bg);
-  border-top-color: color-mix(in srgb, var(--line) 60%, transparent);
 }
 
 html[data-theme='cream'] .tabbar::after,
